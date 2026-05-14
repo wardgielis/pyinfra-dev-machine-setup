@@ -1,0 +1,12 @@
+# Get the full starship experience with minimal lag
+format = "$all"
+add_newline = true
+
+[character]
+# Using a sleek modern arrow, colored in Catppuccin Green (success) and Red (error)
+success_symbol = "[❯](bold #a6e3a1)"
+error_symbol = "[❯](bold #f38ba8)"
+
+[directory]
+truncation_length = 3
+truncate_to_repo = false

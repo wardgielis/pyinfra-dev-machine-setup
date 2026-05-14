@@ -1,0 +1,38 @@
+# --- Window & UI ---
+# Generous padding for a cleaner, modern look
+window-padding-x = 20
+window-padding-y = 20
+
+# Tab styling. macOS defaults to native OS tabs, but this enforces
+# a clean integration. On macOS, use Cmd+T to open a new tab.
+macos-titlebar-style = tabs
+window-decoration = true
+
+# --- Font & Theme ---
+font-family = "JetBrainsMono Nerd Font"
+font-size = 16
+theme = Catppuccin Mocha
+# Enable ligatures for fancy coding symbols (e.g., -> becomes an arrow)
+font-feature = calt
+font-feature = liga
+
+
+# Make the Option key work as Alt/Meta (crucial for terminal text navigation)
+macos-option-as-alt = true
+
+# Slightly blur the background if your theme supports transparency
+background-opacity = 0.96
+background-blur-radius = 20
+
+# This prevents ghostty from overriding the cursor set in Starship/Zsh
+shell-integration-features = no-cursor
+
+# Hides your mouse cursor when you start typing so it doesn't block text
+mouse-hide-while-typing = true
+
+# Forces the macOS tab bar to always be dark to perfectly match Catppuccin Mocha,
+# even if your macOS system switches to light mode during the day.
+window-theme = dark
+
+# Disable the native macOS drop shadow for a completely flat, modern look
+# macos-window-shadow = false

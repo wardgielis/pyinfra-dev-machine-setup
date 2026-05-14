@@ -1,0 +1,98 @@
+# ==========================================
+# 1. ENVIRONMENT & PATH
+# ==========================================
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Load UV if present
+[ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
+
+
+# ==========================================
+# 2. HISTORY & QUALITY OF LIFE
+# ==========================================
+export HISTSIZE=50000
+export SAVEHIST=50000
+export HISTFILE=~/.zsh_history
+setopt HIST_IGNORE_ALL_DUPS
+setopt SHARE_HISTORY
+
+# Directory navigation QoL
+setopt AUTO_CD AUTO_PUSHD PUSHD_IGNORE_DUPS
+
+
+# ==========================================
+# 3. PLUGINS (Antidote Static Compilation)
+# ==========================================
+# Hardcoded path saves ~50-100ms over `$(brew --prefix)`
+source /opt/homebrew/opt/antidote/share/antidote/antidote.zsh
+
+zsh_plugins=${ZDOTDIR:-~}/.zsh_plugins.zsh
+zsh_plugins_txt=${ZDOTDIR:-~}/.zsh_plugins.txt
+
+# Only re-bundle if the .txt file is newer than the .zsh file (or .zsh is missing)
+if [[ ! -f $zsh_plugins ]] || [[ $zsh_plugins_txt -nt $zsh_plugins ]]; then
+  antidote bundle < $zsh_plugins_txt >| $zsh_plugins
+fi
+
+source $zsh_plugins
+
+# ==========================================
+# 4. AUTOCOMPLETION ENGINE (Bluefin Native)
+# ==========================================
+autoload -Uz compinit
+compinit
+
+# Make the standard completion act like a nice menu you can arrow through
+zstyle ':completion:*' menu select
+# Colorize the completion menu
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+# Allow case-insensitive autocomplete (e.g., typing 'desk' finds 'Desktop')
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+
+
+# ==========================================
+# 5. TOOL INITIALIZATIONS
+# ==========================================
+eval "$(starship init zsh)"
+eval "$(zoxide init zsh --cmd cd)"
+eval "$(atuin init zsh)"
+eval "$(mise activate zsh)"
+eval "$(direnv hook zsh)"
+eval "$(tv init zsh)"
+
+# Explicit Atuin binding for Ctrl+R (Forces Atuin to override Television for history)
+bindkey '^r' _atuin_search_widget
+
+
+# ==========================================
+# 6. ALIASES
+# ==========================================
+# Core replacements
+alias ls="eza --icons --group-directories-first"
+alias ll="eza -lh --icons --git"
+alias la="eza -lah --icons --git"
+alias cat="bat"
+alias grep="rg"       # ripgrep
+alias find="fd"
+alias rm="trash"      # trash-cli (sends to trash instead of permanent deletion)
+alias man="tldr"      # Uses tealdeer for quick, readable examples instead of giant man pages
+
+# System monitors
+alias du="dust"       # Better directory sizes
+alias df="dysk"       # Better disk/mount info
+alias top="btop"      # Better task manager
+alias ps="procs"      # Better process viewer
+
+# Editor
+alias nano="micro"    # Replaces old nano with modern micro
+
+# Aliases for work related tools
+alias vault="bao" # use the old vault command for the new openbao package
+
+# ==========================================
+# 7. STARTUP INFO
+# ==========================================
+# Only run fastfetch on the top-level shell (prevents spam on new tabs/panes)
+if [[ $SHLVL == 1 ]]; then
+  fastfetch
+fi
