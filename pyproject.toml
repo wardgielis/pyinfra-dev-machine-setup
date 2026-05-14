@@ -1,7 +1,11 @@
 [project]
-name = "pyinfra-deploy"
+name = "pyinfra-dev-machine-setup"
 version = "0.1.0"
+description = "Pyinfra-managed development machine bootstrapper"
 requires-python = ">=3.14"
 dependencies = [
     "pyinfra>=3.8",
 ]
+
+[project.urls]
+Source = "https://github.com/wardgielis/pyinfra-dev-machine-setup"
