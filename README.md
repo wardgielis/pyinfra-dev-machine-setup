@@ -1,4 +1,4 @@
-# Python Template
+# Pyinfra development machine setup
 
 This is my template for Python projects.
 
