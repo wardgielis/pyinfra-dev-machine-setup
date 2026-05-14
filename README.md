@@ -1,6 +1,6 @@
 # Pyinfra development machine setup
 
-This is my template for Python projects.
+This repository is a template for a new Pyinfra development machine.
 
 # Features
 
