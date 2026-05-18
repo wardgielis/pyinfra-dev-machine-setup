@@ -89,6 +89,9 @@ alias nano="micro"    # Replaces old nano with modern micro
 # Aliases for work related tools
 alias vault="bao" # use the old vault command for the new openbao package
 
+# Kubernetes
+alias k="kubectl"
+
 # ==========================================
 # 7. STARTUP INFO
 # ==========================================

@@ -1,9 +1,6 @@
 import os
 from pyinfra.operations import brew, files
 
-# Explicitly get the home directory
-#home_dir = os.path.expanduser('~')
-
 # --- SECTION 1: GUI APPS, FONTS & WORKSPACE ---
 brew.casks(
     name="Install GUI Apps and Fonts",
@@ -68,6 +65,7 @@ brew.packages(
         "lazydocker",  # TUI for Docker
         "k9s",  # TUI for Kubernetes
         "kubectx",  # Fast K8s context/namespace switching
+        "kubectl", # Kubernetes CLI
         # Modern Text Editor
         "micro",  # nano replacement using nano as alias
     ],
