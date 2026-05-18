@@ -60,6 +60,9 @@ eval "$(mise activate zsh)"
 eval "$(direnv hook zsh)"
 eval "$(tv init zsh)"
 
+# Enable Kubectl autocompletion
+source <(kubectl completion zsh)
+
 # Explicit Atuin binding for Ctrl+R (Forces Atuin to override Television for history)
 bindkey '^r' _atuin_search_widget
 
