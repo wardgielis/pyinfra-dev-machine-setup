@@ -26,6 +26,8 @@ background-blur-radius = 20
 
 # This prevents ghostty from overriding the cursor set in Starship/Zsh
 shell-integration-features = no-cursor
+# Enable SSH integration, ghostty will work on remote SSH servers
+shell-integration-features = ssh-terminfo
 
 # Hides your mouse cursor when you start typing so it doesn't block text
 mouse-hide-while-typing = true
