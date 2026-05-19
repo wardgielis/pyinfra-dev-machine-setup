@@ -3,17 +3,28 @@ from pyinfra.operations import brew, files
 
 # --- SECTION 1: GUI APPS, FONTS & WORKSPACE ---
 brew.casks(
-    name="Install GUI Apps and Fonts",
+    name="Install GUI Apps, Fonts and tools",
     casks=[
         "ghostty",
         "vscodium",
         "bruno",
-        "font-jetbrains-mono-nerd-font"
+        "font-jetbrains-mono-nerd-font",
     ],
     upgrade=True,
 )
 
-# --- SECTION 2: WORK CLI TOOLS (OpenBao & Databricks) ---
+# --- SECTION 2: Coding Agents
+brew.tap(name="Tap AnomalyCo Opencode", src="anomalyco/tap")
+brew.packages(
+    name="Install Coding Agents",
+    packages=[
+        "anomalyco/tap/opencode", # Installing opencode via tap gives the quickest updates
+        "mistral-vibe", # Still comparing vibe and opencode, might remove later
+    ],
+    update=True,
+)
+
+# --- SECTION 3: WORK CLI TOOLS (OpenBao & Databricks) ---
 brew.tap(name="Tap Databricks", src="databricks/tap")
 
 brew.packages(
@@ -26,7 +37,7 @@ brew.packages(
     update=True,
 )
 
-# --- SECTION 3: MODERN TERMINAL (The Rust-based "Bluefin" Set) ---
+# --- SECTION 4: MODERN TERMINAL (The Rust-based "Bluefin" Set) ---
 brew.packages(
     name="Install modern CLI tools",
     packages=[
@@ -72,7 +83,7 @@ brew.packages(
     update=True,
 )
 
-# --- SECTION 4: CONFIG DEPLOYMENT ---
+# --- SECTION 5: CONFIG DEPLOYMENT ---
 # Ensure directories exist
 config_dirs = [
     "~/.config/ghostty",
