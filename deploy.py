@@ -33,6 +33,7 @@ brew.packages(
         "databricks",
         "awscli",
         "openbao",  # Successor to Vault for Naturalis keyvault (we use alias so we can still use vault command)
+        "jira-cli", # Feature-rich interactive Jira CLI (ankitpokhrel/jira-cli)
     ],
     update=True,
 )
