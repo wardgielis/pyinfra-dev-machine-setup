@@ -34,6 +34,7 @@ brew.packages(
         "awscli",
         "openbao",  # Successor to Vault for Naturalis keyvault (we use alias so we can still use vault command)
         "jira-cli", # Feature-rich interactive Jira CLI (ankitpokhrel/jira-cli)
+        "opentofu", # Open source and drop-in replacement for terraform
     ],
     update=True,
 )

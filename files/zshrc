@@ -91,6 +91,7 @@ alias nano="micro"    # Replaces old nano with modern micro
 
 # Aliases for work related tools
 alias vault="bao" # use the old vault command for the new openbao package
+alias terraform="tofu" # use terraform as alias for opentofu so it becomes drop-in replacement
 
 # Kubernetes
 alias k="kubectl"
