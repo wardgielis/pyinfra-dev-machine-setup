@@ -3,12 +3,27 @@ from pyinfra.operations import brew, files
 
 # --- SECTION 1: GUI APPS, FONTS & WORKSPACE ---
 brew.casks(
+    name="Temporary apps that im evaluation, if i like it move to another section.",
+    casks=[
+        "zen",
+    ],
+    upgrade=True,
+)
+
+brew.casks(
     name="Install GUI Apps, Fonts and tools",
     casks=[
         "ghostty",
         "vscodium",
         "bruno",
         "font-jetbrains-mono-nerd-font",
+        "bitwarden",
+        "obsidian",
+        
+        # Communication tools
+        "mattermost",
+        "whatsapp",
+        "signal",
     ],
     upgrade=True,
 )
@@ -30,6 +45,7 @@ brew.tap(name="Tap Databricks", src="databricks/tap")
 brew.packages(
     name="Install Work CLI Tools",
     packages=[
+        "wireguard-tools", # to use EDUVPN without installing the eduvpn client
         "databricks",
         "awscli",
         "openbao",  # Successor to Vault for Naturalis keyvault (we use alias so we can still use vault command)
