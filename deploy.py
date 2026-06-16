@@ -1,11 +1,24 @@
 import os
+import shutil
 from pyinfra.operations import brew, files
+
+from bitwarden_secrets import write_secret
+
+# --- SECTION 0: SECRET MANAGEMENT ---
+write_secret("jira-cli", "JIRA_API_TOKEN")
+
+# Docker Desktop needs os.system for the launchctl sudo prompt (only if not installed)
+if not shutil.which("docker"):
+    print("Installing docker-desktop...")
+    os.system("brew install --cask docker-desktop")
 
 # --- SECTION 1: GUI APPS, FONTS & WORKSPACE ---
 brew.casks(
     name="Temporary apps that im evaluation, if i like it move to another section.",
     casks=[
         "zen",
+        "keepingyouawake",
+        "headlamp", # docker desktop equivalent for k8s
     ],
     upgrade=True,
 )
@@ -19,7 +32,7 @@ brew.casks(
         "font-jetbrains-mono-nerd-font",
         "bitwarden",
         "obsidian",
-        
+
         # Communication tools
         "mattermost",
         "whatsapp",
@@ -27,6 +40,11 @@ brew.casks(
     ],
     upgrade=True,
 )
+
+# --- SECTION 1.5: AUTO-UPDATE (daily brew updates via launchd) ---
+if not os.path.exists(os.path.expanduser("~/Library/LaunchAgents/homebrew.autoupdate.plist")):
+    print("Enabling daily brew auto-updates...")
+    os.system("brew tap homebrew/autoupdate && brew autoupdate start 86400 --cleanup")
 
 # --- SECTION 2: Coding Agents
 brew.tap(name="Tap AnomalyCo Opencode", src="anomalyco/tap")
@@ -75,7 +93,7 @@ brew.packages(
         "gh",         # GitHub CLI
         "glab",       # GitLab CLI
         "mise",       # Polyglot runtime manager (Node, Python, etc.)
-        "direnv",     # Per-project environment variables
+        "direnv",       # Per-project environment variables
         # Shell essentials
         "atuin",      # Shell history
         "starship",   # Prompt (beautiful terminal!)
@@ -95,6 +113,7 @@ brew.packages(
         "k9s",  # TUI for Kubernetes
         "kubectx",  # Fast K8s context/namespace switching
         "kubectl", # Kubernetes CLI
+        "helm", # Kubernetes package manager
         # Modern Text Editor
         "micro",  # nano replacement using nano as alias
     ],
@@ -106,6 +125,7 @@ brew.packages(
 config_dirs = [
     "~/.config/ghostty",
     "~/.config/starship",
+    "~/.config/.jira",
 ]
 
 for d in config_dirs:
@@ -122,6 +142,7 @@ configs_to_sync = {
     "files/zsh_plugins.txt": "~/.zsh_plugins.txt",
     "files/starship.toml": "~/.config/starship.toml",
     "files/ghostty_config": "~/.config/ghostty/config",
+    "files/jira_config": "~/.config/.jira/.config.yml",
 }
 
 for src, dest in configs_to_sync.items():

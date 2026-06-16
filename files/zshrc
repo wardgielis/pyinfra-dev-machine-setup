@@ -6,6 +6,9 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 # Load UV if present
 [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 
+# Load secrets (API tokens, keys — not committed to repo)
+[ -f "$HOME/.secrets" ] && . "$HOME/.secrets"
+
 
 # ==========================================
 # 2. HISTORY & QUALITY OF LIFE
