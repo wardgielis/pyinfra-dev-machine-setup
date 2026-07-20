@@ -11,6 +11,28 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 
 
 # ==========================================
+# 1.5. DAILY BREW MAINTENANCE
+# Runs brew update/upgrade/cleanup on the first terminal open each day.
+# Foreground so you see all output. HOMEBREW_NO_ASK=1 skips Y/N prompts.
+# ==========================================
+_brew_daily_update() {
+    local stamp="$HOME/.brew_update_date"
+    local today
+    today=$(date +%Y-%m-%d)
+    if [[ ! -f "$stamp" ]] || [[ "$(cat "$stamp")" != "$today" ]]; then
+        echo "$today" > "$stamp"
+        HOMEBREW_NO_ASK=1 brew update \
+            && HOMEBREW_NO_ASK=1 brew upgrade \
+            && HOMEBREW_NO_ASK=1 brew upgrade --cask \
+            && brew autoremove \
+            && brew cleanup --prune=30 \
+            && echo "✓ Daily brew maintenance done."
+    fi
+}
+_brew_daily_update
+
+
+# ==========================================
 # 2. HISTORY & QUALITY OF LIFE
 # ==========================================
 export HISTSIZE=50000
@@ -32,8 +54,9 @@ source /opt/homebrew/opt/antidote/share/antidote/antidote.zsh
 zsh_plugins=${ZDOTDIR:-~}/.zsh_plugins.zsh
 zsh_plugins_txt=${ZDOTDIR:-~}/.zsh_plugins.txt
 
-# Only re-bundle if the .txt file is newer than the .zsh file (or .zsh is missing)
-if [[ ! -f $zsh_plugins ]] || [[ $zsh_plugins_txt -nt $zsh_plugins ]]; then
+# Re-bundle if .zsh is missing, .txt is newer, or the plugin cache is gone
+if [[ ! -f $zsh_plugins ]] || [[ $zsh_plugins_txt -nt $zsh_plugins ]] || \
+   [[ ! -d ~/Library/Caches/antidote ]]; then
   antidote bundle < $zsh_plugins_txt >| $zsh_plugins
 fi
 
