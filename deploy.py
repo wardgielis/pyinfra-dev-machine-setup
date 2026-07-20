@@ -33,10 +33,16 @@ brew.casks(
         "bitwarden",
         "obsidian",
 
+        # Opensource macos cleanup tool
+        "puremac",
+
         # Communication tools
         "mattermost",
         "whatsapp",
         "signal",
+
+        # Music
+        "reaper",
     ],
     upgrade=True,
 )
