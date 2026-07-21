@@ -149,19 +149,19 @@ if not shutil.which("docker"):
 brew.casks(
     name="Personal Apps",
     casks=PERSONAL_CASKS,
-    upgrade=True,
+    upgrade=False,
 )
 
 brew.casks(
     name="Temporary apps that im evaluation, if i like it move to another section.",
     casks=EVAL_CASKS,
-    upgrade=True,
+    latest=True,
 )
 
 brew.casks(
     name="Install GUI Apps, Fonts and tools",
     casks=GUI_CASKS,
-    upgrade=True,
+    latest=True,
 )
 
 
@@ -173,6 +173,7 @@ brew.packages(
     name="Install Coding Agents",
     packages=CODING_FORMULAE,
     update=True,
+    latest=True,
 )
 
 
@@ -185,6 +186,7 @@ brew.packages(
     name="Install Work CLI Tools",
     packages=WORK_FORMULAE,
     update=True,
+    latest=True,
 )
 
 
@@ -195,6 +197,7 @@ brew.packages(
     name="Install modern CLI tools",
     packages=CLI_FORMULAE,
     update=True,
+    latest=True,
 )
 
 
