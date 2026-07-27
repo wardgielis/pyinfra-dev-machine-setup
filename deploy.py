@@ -27,6 +27,17 @@ for _line in _env_path.read_text().splitlines():
         os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 
 # ============================================================
+# TAP TRUST: Ensure third-party tap formulae are trusted.
+# Uses os.system (real TTY) so brew can process the confirmation.
+# ============================================================
+_TAP_FORMULAE_TO_TRUST = [
+    "anomalyco/tap/opencode",
+    "databricks/tap/databricks",
+]
+for _formula in _TAP_FORMULAE_TO_TRUST:
+    os.system(f"brew trust --formula {_formula} 2>/dev/null")
+
+# ============================================================
 # DATA: All managed packages — single source of truth
 # Packages defined here are installed AND protected from cleanup.
 # Anything in brew but NOT listed below will be flagged for removal.
@@ -152,8 +163,8 @@ brew.tap(name="Tap AnomalyCo Opencode", src="anomalyco/tap")
 brew.tap(name="Tap Databricks", src="databricks/tap")
 
 server.shell(
-    name="Trust all managed taps",
-    commands=[f"brew trust {t}" for t in TAPS],
+    name="Trust managed tap formulae",
+    commands=[f"brew trust --formula {f}" for f in _TAP_FORMULAE_TO_TRUST],
 )
 
 
@@ -292,8 +303,8 @@ _user_confirmed = [False]
 
 def _preview_and_confirm():
     import subprocess
-    for _tap in TAPS:
-        subprocess.run(["brew", "trust", _tap], capture_output=True)
+    for _formula in _TAP_FORMULAE_TO_TRUST:
+        subprocess.run(["brew", "trust", "--formula", _formula], capture_output=True)
     print("\n--- Brew drift preview (packages not in deploy.py) ---")
     subprocess.run(
         ["brew", "bundle", "cleanup", "--file=/tmp/pyinfra-managed-brewfile"]

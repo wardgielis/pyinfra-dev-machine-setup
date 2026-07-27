@@ -23,7 +23,7 @@ _brew_daily_update() {
         echo "$today" > "$stamp"
         HOMEBREW_NO_ASK=1 brew update \
             && HOMEBREW_NO_ASK=1 brew upgrade \
-            && HOMEBREW_NO_ASK=1 brew upgrade --cask \
+            && HOMEBREW_NO_ASK=1 brew upgrade --cask --greedy \
             && brew autoremove \
             && brew cleanup --prune=30 \
             && echo "✓ Daily brew maintenance done."
