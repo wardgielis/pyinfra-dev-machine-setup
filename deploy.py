@@ -144,6 +144,20 @@ if not shutil.which("docker"):
 
 
 # ============================================================
+# SECTION 0.5: TAPS & TRUST
+# Both taps must be declared and trusted before any packages
+# from those taps are installed.
+# ============================================================
+brew.tap(name="Tap AnomalyCo Opencode", src="anomalyco/tap")
+brew.tap(name="Tap Databricks", src="databricks/tap")
+
+server.shell(
+    name="Trust all managed taps",
+    commands=[f"brew trust {t}" for t in TAPS],
+)
+
+
+# ============================================================
 # SECTION 1: GUI APPS, FONTS & WORKSPACE
 # ============================================================
 brew.casks(
@@ -155,20 +169,17 @@ brew.casks(
 brew.casks(
     name="Temporary apps that im evaluation, if i like it move to another section.",
     casks=EVAL_CASKS,
-    latest=True,
 )
 
 brew.casks(
     name="Install GUI Apps, Fonts and tools",
     casks=GUI_CASKS,
-    latest=True,
 )
 
 
 # ============================================================
 # SECTION 2: Coding Agents
 # ============================================================
-brew.tap(name="Tap AnomalyCo Opencode", src="anomalyco/tap")
 brew.packages(
     name="Install Coding Agents",
     packages=CODING_FORMULAE,
@@ -180,8 +191,6 @@ brew.packages(
 # ============================================================
 # SECTION 3: WORK CLI TOOLS (OpenBao & Databricks)
 # ============================================================
-brew.tap(name="Tap Databricks", src="databricks/tap")
-
 brew.packages(
     name="Install Work CLI Tools",
     packages=WORK_FORMULAE,
@@ -256,21 +265,19 @@ files.file(
 )
 
 
-server.shell(
-    name="Trust all managed taps",
-    commands=[f"brew trust {t}" for t in TAPS],
-)
-
-
 # ============================================================
 # SECTION 6: CLEANUP UNMANAGED PACKAGES
 # Generates a Brewfile from the lists above, shows a dry-run
 # preview of what would be removed, and asks for confirmation
 # before actually removing anything.
 # ============================================================
+def _short_name(f):
+    parts = f.split("/")
+    return parts[-1] if len(parts) == 3 else f
+
 _brewfile_lines = (
     [f'tap "{t}"' for t in TAPS]
-    + [f'brew "{f}"' for f in CODING_FORMULAE + WORK_FORMULAE + CLI_FORMULAE + _SIDEEFFECT_FORMULAE]
+    + [f'brew "{_short_name(f)}"' for f in CODING_FORMULAE + WORK_FORMULAE + CLI_FORMULAE + _SIDEEFFECT_FORMULAE]
     + [f'cask "{c}"' for c in PERSONAL_CASKS + EVAL_CASKS + GUI_CASKS + _SIDEEFFECT_CASKS]
 )
 
@@ -285,6 +292,8 @@ _user_confirmed = [False]
 
 def _preview_and_confirm():
     import subprocess
+    for _tap in TAPS:
+        subprocess.run(["brew", "trust", _tap], capture_output=True)
     print("\n--- Brew drift preview (packages not in deploy.py) ---")
     subprocess.run(
         ["brew", "bundle", "cleanup", "--file=/tmp/pyinfra-managed-brewfile"]

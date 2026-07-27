@@ -27,9 +27,10 @@ _brew_daily_update() {
             && brew autoremove \
             && brew cleanup --prune=30 \
             && echo "✓ Daily brew maintenance done."
+    else
+        echo "brew: already updated today (${today})"
     fi
 }
-_brew_daily_update
 
 
 # ==========================================
@@ -129,3 +130,4 @@ alias k="kubectl"
 if [[ $SHLVL == 1 ]]; then
   fastfetch
 fi
+_brew_daily_update
