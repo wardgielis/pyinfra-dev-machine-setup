@@ -16,6 +16,10 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 # Foreground so you see all output. HOMEBREW_NO_ASK=1 skips Y/N prompts.
 # ==========================================
 _brew_daily_update() {
+    # Trust the specific formulae we need (Homebrew's recommended approach)
+    # Runs silently once per day, necessary for tapped formulae to work
+    brew trust --formula anomalyco/tap/opencode databricks/tap/databricks 2>/dev/null || true
+    
     local stamp="$HOME/.brew_update_date"
     local today
     today=$(date +%Y-%m-%d)
