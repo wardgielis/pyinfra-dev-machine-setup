@@ -6,6 +6,9 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 # Load UV if present
 [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 
+# Bitwarden SSH agent — only set if the socket exists
+[ -S ~/.bitwarden-ssh-agent.sock ] && export SSH_AUTH_SOCK=~/.bitwarden-ssh-agent.sock
+
 # Load secrets (API tokens, keys — not committed to repo)
 [ -f "$HOME/.secrets" ] && . "$HOME/.secrets"
 
