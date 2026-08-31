@@ -239,6 +239,7 @@ config_dirs = [
     "~/.config/ghostty",
     "~/.config/starship",
     "~/.config/.jira",
+    "~/.aws",
 ]
 
 for d in config_dirs:
@@ -277,6 +278,41 @@ files.put(
     name="Sync ~/.config/.jira/.config.yml",
     src=io.StringIO(_jira_rendered),
     dest=os.path.expanduser("~/.config/.jira/.config.yml"),
+)
+
+# Render and deploy Databricks config from template + .env values
+_databricks_rendered = string.Template(
+    (pathlib.Path(__file__).parent / "files" / "databrickscfg").read_text()
+).substitute(
+    DATABRICKS_DEV_HOST=os.environ["DATABRICKS_DEV_HOST"],
+    DATABRICKS_PROD_HOST=os.environ["DATABRICKS_PROD_HOST"],
+    DATABRICKS_ACCOUNT_ID=os.environ["DATABRICKS_ACCOUNT_ID"],
+    DATABRICKS_DEV_WORKSPACE_ID=os.environ["DATABRICKS_DEV_WORKSPACE_ID"],
+    DATABRICKS_PROD_WORKSPACE_ID=os.environ["DATABRICKS_PROD_WORKSPACE_ID"],
+)
+
+files.put(
+    name="Sync ~/.databrickscfg",
+    src=io.StringIO(_databricks_rendered),
+    dest=os.path.expanduser("~/.databrickscfg"),
+)
+
+# Render and deploy AWS config from template + .env values
+_aws_rendered = string.Template(
+    (pathlib.Path(__file__).parent / "files" / "aws_config").read_text()
+).substitute(
+    AWS_ACCOUNT_ID=os.environ["AWS_ACCOUNT_ID"],
+    AWS_LOGIN_EMAIL=os.environ["AWS_LOGIN_EMAIL"],
+    AWS_AIRFLOW_PROD_ACCESS_KEY_ID=os.environ["AWS_AIRFLOW_PROD_ACCESS_KEY_ID"],
+    AWS_AIRFLOW_PROD_SECRET_ACCESS_KEY=os.environ["AWS_AIRFLOW_PROD_SECRET_ACCESS_KEY"],
+    AWS_AIRFLOW_DEV_ACCESS_KEY_ID=os.environ["AWS_AIRFLOW_DEV_ACCESS_KEY_ID"],
+    AWS_AIRFLOW_DEV_SECRET_ACCESS_KEY=os.environ["AWS_AIRFLOW_DEV_SECRET_ACCESS_KEY"],
+)
+
+files.put(
+    name="Sync ~/.aws/config",
+    src=io.StringIO(_aws_rendered),
+    dest=os.path.expanduser("~/.aws/config"),
 )
 
 # Hush the macOS "Last Login" message (remove it as it is pretty ugly)

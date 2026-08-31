@@ -1,0 +1,19 @@
+[profile pycharm]
+login_session = arn:aws:sts::${AWS_ACCOUNT_ID}:assumed-role/role.saml.biocloud/${AWS_LOGIN_EMAIL}
+region = eu-north-1
+
+[profile pycharm_process]
+credential_process = /opt/homebrew/bin/aws configure export-credentials --profile pycharm --format process
+region = eu-north-1
+
+[profile airflow_production]
+aws_access_key_id = ${AWS_AIRFLOW_PROD_ACCESS_KEY_ID}
+aws_secret_access_key = ${AWS_AIRFLOW_PROD_SECRET_ACCESS_KEY}
+
+[profile airflow_development]
+aws_access_key_id = ${AWS_AIRFLOW_DEV_ACCESS_KEY_ID}
+aws_secret_access_key = ${AWS_AIRFLOW_DEV_SECRET_ACCESS_KEY}
+
+[default]
+login_session = arn:aws:sts::${AWS_ACCOUNT_ID}:assumed-role/role.saml.biocloud/${AWS_LOGIN_EMAIL}
+region = us-east-1
