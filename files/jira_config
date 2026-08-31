@@ -1,5 +1,5 @@
 auth_type: basic
-board: ""
+board: "${JIRA_BOARD_ID}"
 epic:
     name: customfield_10011
     link: customfield_10014

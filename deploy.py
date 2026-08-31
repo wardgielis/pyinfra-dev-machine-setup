@@ -5,7 +5,7 @@ import shutil
 import string
 from pyinfra.operations import brew, files, python, server
 
-from bitwarden_secrets import write_secret
+# from bitwarden_secrets import write_secret  # deprecated — see bitwarden_secrets.py
 
 # ============================================================
 # BOOTSTRAP: Load local .env (gitignored, never committed)
@@ -145,8 +145,18 @@ _SIDEEFFECT_CASKS    = ["docker-desktop"] # installed via os.system below if doc
 
 # ============================================================
 # SECTION 0: SECRET MANAGEMENT
+# JIRA_API_TOKEN is read from .env (loaded above) and written to
+# ~/.secrets so the shell can source it. No Bitwarden auth needed.
 # ============================================================
-write_secret("jira-cli", "JIRA_API_TOKEN")
+_jira_token = os.environ.get("JIRA_API_TOKEN", "")
+if not _jira_token:
+    print("Warning: JIRA_API_TOKEN not set in .env — add it and re-run.")
+else:
+    files.put(
+        name="Write JIRA_API_TOKEN to ~/.secrets",
+        src=io.StringIO(f"export JIRA_API_TOKEN={_jira_token}\n"),
+        dest=os.path.expanduser("~/.secrets"),
+    )
 
 # Docker Desktop needs os.system for the launchctl sudo prompt (only if not installed)
 if not shutil.which("docker"):
@@ -260,6 +270,7 @@ _jira_rendered = string.Template(
     JIRA_LOGIN=os.environ["JIRA_LOGIN"],
     JIRA_SERVER=os.environ["JIRA_SERVER"],
     JIRA_PROJECT_KEY=os.environ["JIRA_PROJECT_KEY"],
+    JIRA_BOARD_ID=os.environ["JIRA_BOARD_ID"],
 )
 
 files.put(
