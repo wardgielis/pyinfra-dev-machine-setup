@@ -7,7 +7,6 @@ A [Pyinfra](https://pyinfra.com) managed repository to bootstrap a modern develo
 - [ZSH](https://www.zsh.org/)
 - [Homebrew](https://brew.sh/)
 - [uv](https://docs.astral.sh/uv/) — Python package manager
-- [Bitwarden](https://bitwarden.com/) — desktop app installed and logged in (used to fetch the Jira API token)
 
 ## Quickstart
 
@@ -26,19 +25,27 @@ cp .env.example .env
 Fill in `.env` with your values:
 
 ```
-BW_SSO_ORG=YourOrg               # Bitwarden SSO organization name
-JIRA_LOGIN=you@company.com        # Your Jira email
+JIRA_LOGIN=you@company.com
 JIRA_SERVER=https://your-org.atlassian.net
-JIRA_PROJECT_KEY=YOURKEY          # Default Jira project key
+JIRA_PROJECT_KEY=YOURKEY
+JIRA_BOARD_ID=65
+JIRA_API_TOKEN=your_jira_api_token   # generate at id.atlassian.com → Security → API tokens
+
+DATABRICKS_DEV_HOST=https://your-dev-workspace.cloud.databricks.com
+DATABRICKS_PROD_HOST=https://your-prod-workspace.cloud.databricks.com
+DATABRICKS_ACCOUNT_ID=your-account-uuid
+DATABRICKS_DEV_WORKSPACE_ID=your-dev-workspace-id
+DATABRICKS_PROD_WORKSPACE_ID=your-prod-workspace-id
+
+AWS_ACCOUNT_ID=your-aws-account-id
+AWS_LOGIN_EMAIL=you@yourorg.com
+AWS_AIRFLOW_PROD_ACCESS_KEY_ID=...
+AWS_AIRFLOW_PROD_SECRET_ACCESS_KEY=...
+AWS_AIRFLOW_DEV_ACCESS_KEY_ID=...
+AWS_AIRFLOW_DEV_SECRET_ACCESS_KEY=...
 ```
 
-**3. Set up Bitwarden**
-
-The deploy fetches your Jira API token from Bitwarden. Make sure you have:
-- A Bitwarden login item named exactly `jira-cli` with the API token as its password
-- Touch ID unlock enabled in the Bitwarden desktop app (Settings → Security) for a seamless experience
-
-**4. Run the deploy**
+**3. Run the deploy**
 
 ```sh
 uv run pyinfra @local deploy.py
@@ -51,7 +58,7 @@ uv run pyinfra @local deploy.py
 - **Coding agents** — OpenCode, Mistral Vibe
 - **Modern CLI replacements** — eza, bat, zoxide, ripgrep, fd, fastfetch, dust, btop, procs, lazygit, git-delta, gitleaks, git-filter-repo, gh, glab, mise, direnv, atuin, starship, antidote, viu, lsix, yazi, tealdeer, television, trash-cli, dysk, yq, lazydocker, k9s, kubectx, kubectl, helm, micro
 - **Shell configuration** — daily brew auto-update on first terminal open, Starship prompt, Ghostty config, ZSH plugins (autosuggestions, syntax highlighting, completions via Antidote), aliases mapping classic commands to modern replacements
-- **Secret management** — fetches Jira API token from Bitwarden and writes it to `~/.secrets`
+- **Config deployment** — renders Jira, Databricks, and AWS config files from `.env` templates and deploys them to their expected locations (`~/.config/.jira/.config.yml`, `~/.databrickscfg`, `~/.aws/config`); writes `JIRA_API_TOKEN` to `~/.secrets` for shell sourcing
 - **Drift cleanup** — generates a Brewfile from the managed package lists, shows a preview of unmanaged packages, and removes them after your confirmation
 - **Housekeeping** — silences macOS "Last Login" message, renders Jira CLI config from `.env` template
 

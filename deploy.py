@@ -5,8 +5,6 @@ import shutil
 import string
 from pyinfra.operations import brew, files, python, server
 
-# from bitwarden_secrets import write_secret  # deprecated — see bitwarden_secrets.py
-
 # ============================================================
 # BOOTSTRAP: Load local .env (gitignored, never committed)
 # ============================================================
@@ -139,24 +137,23 @@ CLI_FORMULAE = [
 
 # Installed by side-effects (not via brew.packages/brew.casks) but still managed
 # here so the cleanup step doesn't flag them for removal.
-_SIDEEFFECT_FORMULAE = ["bitwarden-cli"]  # installed by bitwarden_secrets.py if missing
-_SIDEEFFECT_CASKS    = ["docker-desktop"] # installed via os.system below if docker absent
+_SIDEEFFECT_CASKS = ["docker-desktop"]  # installed via os.system below if docker absent
 
 
 # ============================================================
-# SECTION 0: SECRET MANAGEMENT
+# SECTION 0: SHELL TOKEN SETUP
 # JIRA_API_TOKEN is read from .env (loaded above) and written to
-# ~/.secrets so the shell can source it. No Bitwarden auth needed.
+# ~/.secrets so the shell can source it.
 # ============================================================
 _jira_token = os.environ.get("JIRA_API_TOKEN", "")
 if not _jira_token:
-    print("Warning: JIRA_API_TOKEN not set in .env — add it and re-run.")
-else:
-    files.put(
-        name="Write JIRA_API_TOKEN to ~/.secrets",
-        src=io.StringIO(f"export JIRA_API_TOKEN={_jira_token}\n"),
-        dest=os.path.expanduser("~/.secrets"),
-    )
+    raise SystemExit("Missing env var: JIRA_API_TOKEN — add it to .env")
+files.put(
+    name="Write JIRA_API_TOKEN to ~/.secrets",
+    src=io.StringIO(f"export JIRA_API_TOKEN={_jira_token}\n"),
+    dest=os.path.expanduser("~/.secrets"),
+    mode="0600",
+)
 
 # Docker Desktop needs os.system for the launchctl sudo prompt (only if not installed)
 if not shutil.which("docker"):
@@ -188,7 +185,7 @@ brew.casks(
 )
 
 brew.casks(
-    name="Temporary apps that im evaluation, if i like it move to another section.",
+    name="Temporary apps under evaluation — promote or drop as needed.",
     casks=EVAL_CASKS,
 )
 
@@ -264,56 +261,37 @@ for src, dest in configs_to_sync.items():
         dest=os.path.expanduser(dest),
     )
 
-# Render and deploy jira config from template + .env values
-_jira_rendered = string.Template(
-    (pathlib.Path(__file__).parent / "files" / "jira_config").read_text()
-).substitute(
-    JIRA_LOGIN=os.environ["JIRA_LOGIN"],
-    JIRA_SERVER=os.environ["JIRA_SERVER"],
-    JIRA_PROJECT_KEY=os.environ["JIRA_PROJECT_KEY"],
-    JIRA_BOARD_ID=os.environ["JIRA_BOARD_ID"],
-)
+def _deploy_template(dest, template_name, varnames, mode=None):
+    missing = [v for v in varnames if v not in os.environ]
+    if missing:
+        raise SystemExit(f"Missing env vars for {dest}: {', '.join(missing)} — add them to .env")
+    rendered = string.Template(
+        (pathlib.Path(__file__).parent / "files" / template_name).read_text()
+    ).substitute(**{v: os.environ[v] for v in varnames})
+    files.put(
+        name=f"Sync {dest}",
+        src=io.StringIO(rendered),
+        dest=os.path.expanduser(dest),
+        mode=mode,
+    )
 
-files.put(
-    name="Sync ~/.config/.jira/.config.yml",
-    src=io.StringIO(_jira_rendered),
-    dest=os.path.expanduser("~/.config/.jira/.config.yml"),
-)
+_template_configs = [
+    ("~/.config/.jira/.config.yml", "jira_config", [
+        "JIRA_LOGIN", "JIRA_SERVER", "JIRA_PROJECT_KEY", "JIRA_BOARD_ID",
+    ], None),
+    ("~/.databrickscfg", "databrickscfg", [
+        "DATABRICKS_DEV_HOST", "DATABRICKS_PROD_HOST", "DATABRICKS_ACCOUNT_ID",
+        "DATABRICKS_DEV_WORKSPACE_ID", "DATABRICKS_PROD_WORKSPACE_ID",
+    ], None),
+    ("~/.aws/config", "aws_config", [
+        "AWS_ACCOUNT_ID", "AWS_LOGIN_EMAIL",
+        "AWS_AIRFLOW_PROD_ACCESS_KEY_ID", "AWS_AIRFLOW_PROD_SECRET_ACCESS_KEY",
+        "AWS_AIRFLOW_DEV_ACCESS_KEY_ID", "AWS_AIRFLOW_DEV_SECRET_ACCESS_KEY",
+    ], "0600"),
+]
 
-# Render and deploy Databricks config from template + .env values
-_databricks_rendered = string.Template(
-    (pathlib.Path(__file__).parent / "files" / "databrickscfg").read_text()
-).substitute(
-    DATABRICKS_DEV_HOST=os.environ["DATABRICKS_DEV_HOST"],
-    DATABRICKS_PROD_HOST=os.environ["DATABRICKS_PROD_HOST"],
-    DATABRICKS_ACCOUNT_ID=os.environ["DATABRICKS_ACCOUNT_ID"],
-    DATABRICKS_DEV_WORKSPACE_ID=os.environ["DATABRICKS_DEV_WORKSPACE_ID"],
-    DATABRICKS_PROD_WORKSPACE_ID=os.environ["DATABRICKS_PROD_WORKSPACE_ID"],
-)
-
-files.put(
-    name="Sync ~/.databrickscfg",
-    src=io.StringIO(_databricks_rendered),
-    dest=os.path.expanduser("~/.databrickscfg"),
-)
-
-# Render and deploy AWS config from template + .env values
-_aws_rendered = string.Template(
-    (pathlib.Path(__file__).parent / "files" / "aws_config").read_text()
-).substitute(
-    AWS_ACCOUNT_ID=os.environ["AWS_ACCOUNT_ID"],
-    AWS_LOGIN_EMAIL=os.environ["AWS_LOGIN_EMAIL"],
-    AWS_AIRFLOW_PROD_ACCESS_KEY_ID=os.environ["AWS_AIRFLOW_PROD_ACCESS_KEY_ID"],
-    AWS_AIRFLOW_PROD_SECRET_ACCESS_KEY=os.environ["AWS_AIRFLOW_PROD_SECRET_ACCESS_KEY"],
-    AWS_AIRFLOW_DEV_ACCESS_KEY_ID=os.environ["AWS_AIRFLOW_DEV_ACCESS_KEY_ID"],
-    AWS_AIRFLOW_DEV_SECRET_ACCESS_KEY=os.environ["AWS_AIRFLOW_DEV_SECRET_ACCESS_KEY"],
-)
-
-files.put(
-    name="Sync ~/.aws/config",
-    src=io.StringIO(_aws_rendered),
-    dest=os.path.expanduser("~/.aws/config"),
-)
+for _dest, _tmpl, _vars, _mode in _template_configs:
+    _deploy_template(_dest, _tmpl, _vars, _mode)
 
 # Hush the macOS "Last Login" message (remove it as it is pretty ugly)
 files.file(
@@ -335,7 +313,7 @@ def _short_name(f):
 
 _brewfile_lines = (
     [f'tap "{t}"' for t in TAPS]
-    + [f'brew "{_short_name(f)}"' for f in CODING_FORMULAE + WORK_FORMULAE + CLI_FORMULAE + _SIDEEFFECT_FORMULAE]
+    + [f'brew "{_short_name(f)}"' for f in CODING_FORMULAE + WORK_FORMULAE + CLI_FORMULAE]
     + [f'cask "{c}"' for c in PERSONAL_CASKS + EVAL_CASKS + GUI_CASKS + _SIDEEFFECT_CASKS]
 )
 
