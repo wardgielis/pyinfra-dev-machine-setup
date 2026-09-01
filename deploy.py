@@ -63,6 +63,7 @@ GUI_CASKS = [
     "font-jetbrains-mono-nerd-font",
     "bitwarden",
     "obsidian",
+    "opencode-desktop",
 
     # Opensource macos cleanup tool
     "puremac",
@@ -74,6 +75,9 @@ GUI_CASKS = [
 
     # Music
     "reaper",
+
+    # Video editing
+    "kdenlive",
 ]
 
 CODING_FORMULAE = [
@@ -329,7 +333,7 @@ _user_confirmed = [False]
 def _preview_and_confirm():
     import subprocess
     for _formula in _TAP_FORMULAE_TO_TRUST:
-        subprocess.run(["brew", "trust", "--formula", _formula], capture_output=True)
+        os.system(f"brew trust --formula {_formula} 2>/dev/null")
     print("\n--- Brew drift preview (packages not in deploy.py) ---")
     subprocess.run(
         ["brew", "bundle", "cleanup", "--file=/tmp/pyinfra-managed-brewfile"]
