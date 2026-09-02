@@ -5,6 +5,22 @@ import shutil
 import string
 from pyinfra.operations import brew, files, python, server
 
+
+def _deploy_template(dest, template_name, varnames, mode=None):
+    missing = [v for v in varnames if v not in os.environ]
+    if missing:
+        raise SystemExit(f"Missing env vars for {dest}: {', '.join(missing)} — add them to .env")
+    rendered = string.Template(
+        (pathlib.Path(__file__).parent / "files" / template_name).read_text()
+    ).substitute(**{v: os.environ[v] for v in varnames})
+    files.put(
+        name=f"Sync {dest}",
+        src=io.StringIO(rendered),
+        dest=os.path.expanduser(dest),
+        mode=mode,
+    )
+
+
 # ============================================================
 # BOOTSTRAP: Load local .env (gitignored, never committed)
 # ============================================================
@@ -246,20 +262,6 @@ for src, dest in configs_to_sync.items():
         name=f"Sync {dest}",
         src=src,
         dest=os.path.expanduser(dest),
-    )
-
-def _deploy_template(dest, template_name, varnames, mode=None):
-    missing = [v for v in varnames if v not in os.environ]
-    if missing:
-        raise SystemExit(f"Missing env vars for {dest}: {', '.join(missing)} — add them to .env")
-    rendered = string.Template(
-        (pathlib.Path(__file__).parent / "files" / template_name).read_text()
-    ).substitute(**{v: os.environ[v] for v in varnames})
-    files.put(
-        name=f"Sync {dest}",
-        src=io.StringIO(rendered),
-        dest=os.path.expanduser(dest),
-        mode=mode,
     )
 
 _template_configs = [
