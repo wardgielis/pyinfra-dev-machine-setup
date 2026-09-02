@@ -144,21 +144,6 @@ CLI_FORMULAE = [
 _SIDEEFFECT_CASKS = ["docker-desktop"]  # installed via os.system below if docker absent
 
 
-# ============================================================
-# SECTION 0: SHELL TOKEN SETUP
-# JIRA_API_TOKEN is read from .env (loaded above) and written to
-# ~/.secrets so the shell can source it.
-# ============================================================
-_jira_token = os.environ.get("JIRA_API_TOKEN", "")
-if not _jira_token:
-    raise SystemExit("Missing env var: JIRA_API_TOKEN — add it to .env")
-files.put(
-    name="Write JIRA_API_TOKEN to ~/.secrets",
-    src=io.StringIO(f"export JIRA_API_TOKEN={_jira_token}\n"),
-    dest=os.path.expanduser("~/.secrets"),
-    mode="0600",
-)
-
 # Docker Desktop needs os.system for the launchctl sudo prompt (only if not installed)
 if not shutil.which("docker"):
     print("Installing docker-desktop...")
@@ -166,7 +151,7 @@ if not shutil.which("docker"):
 
 
 # ============================================================
-# SECTION 0.5: TAPS & TRUST
+# SECTION 1: TAPS & TRUST
 # Both taps must be declared and trusted before any packages
 # from those taps are installed.
 # ============================================================
@@ -180,7 +165,7 @@ server.shell(
 
 
 # ============================================================
-# SECTION 1: GUI APPS, FONTS & WORKSPACE
+# SECTION 2: GUI APPS, FONTS & WORKSPACE
 # ============================================================
 brew.casks(
     name="Personal Apps",
@@ -200,7 +185,7 @@ brew.casks(
 
 
 # ============================================================
-# SECTION 2: Coding Agents
+# SECTION 3: Coding Agents
 # ============================================================
 brew.packages(
     name="Install Coding Agents",
@@ -211,29 +196,27 @@ brew.packages(
 
 
 # ============================================================
-# SECTION 3: WORK CLI TOOLS (OpenBao & Databricks)
+# SECTION 4: WORK CLI TOOLS (OpenBao & Databricks)
 # ============================================================
 brew.packages(
     name="Install Work CLI Tools",
     packages=WORK_FORMULAE,
-    update=True,
     latest=True,
 )
 
 
 # ============================================================
-# SECTION 4: MODERN TERMINAL (The Rust-based "Bluefin" Set)
+# SECTION 5: MODERN TERMINAL (The Rust-based "Bluefin" Set)
 # ============================================================
 brew.packages(
     name="Install modern CLI tools",
     packages=CLI_FORMULAE,
-    update=True,
     latest=True,
 )
 
 
 # ============================================================
-# SECTION 5: CONFIG DEPLOYMENT
+# SECTION 6: CONFIG DEPLOYMENT
 # ============================================================
 # Ensure directories exist
 config_dirs = [
@@ -280,6 +263,7 @@ def _deploy_template(dest, template_name, varnames, mode=None):
     )
 
 _template_configs = [
+    ("~/.secrets", "secrets", ["JIRA_API_TOKEN"], "0600"),
     ("~/.config/.jira/.config.yml", "jira_config", [
         "JIRA_LOGIN", "JIRA_SERVER", "JIRA_PROJECT_KEY", "JIRA_BOARD_ID",
     ], None),
@@ -306,7 +290,7 @@ files.file(
 
 
 # ============================================================
-# SECTION 6: CLEANUP UNMANAGED PACKAGES
+# SECTION 7: CLEANUP UNMANAGED PACKAGES
 # Generates a Brewfile from the lists above, shows a dry-run
 # preview of what would be removed, and asks for confirmation
 # before actually removing anything.
