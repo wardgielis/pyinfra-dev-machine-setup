@@ -41,17 +41,6 @@ for _line in _env_path.read_text().splitlines():
         os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 
 # ============================================================
-# TAP TRUST: Ensure third-party tap formulae are trusted.
-# Uses os.system (real TTY) so brew can process the confirmation.
-# ============================================================
-_TAP_FORMULAE_TO_TRUST = [
-    "anomalyco/tap/opencode",
-    "databricks/tap/databricks",
-]
-for _formula in _TAP_FORMULAE_TO_TRUST:
-    os.system(f"brew trust --formula {_formula} 2>/dev/null")
-
-# ============================================================
 # DATA: All managed packages — single source of truth
 # Packages defined here are installed AND protected from cleanup.
 # Anything in brew but NOT listed below will be flagged for removal.
@@ -61,6 +50,13 @@ TAPS = [
     "anomalyco/tap",
     "databricks/tap",
 ]
+
+# ============================================================
+# TAP TRUST: Ensure taps are trusted before installing packages.
+# Uses os.system (real TTY) so brew can process the confirmation.
+# ============================================================
+for _tap in TAPS:
+    os.system(f"brew trust {_tap} 2>/dev/null")
 
 PERSONAL_CASKS = [
     "league-of-legends",  # Games
@@ -94,6 +90,9 @@ GUI_CASKS = [
 
     # Video editing
     "kdenlive",
+
+    # Container management (replaces Docker Desktop)
+    "podman-desktop",
 ]
 
 CODING_FORMULAE = [
@@ -146,6 +145,8 @@ CLI_FORMULAE = [
     "dysk",       # Better disk/mount info
     "yq",         # YAML processor
     # Container & Cluster Tools
+    "podman",         # Docker-compatible container runtime (rootless, daemonless)
+    "podman-compose", # docker-compose compatible (aliased as docker-compose in zshrc)
     "lazydocker",  # TUI for Docker
     "k9s",         # TUI for Kubernetes
     "kubectx",     # Fast K8s context/namespace switching
@@ -154,17 +155,6 @@ CLI_FORMULAE = [
     # Modern Text Editor
     "micro",  # nano replacement using nano as alias
 ]
-
-# Installed by side-effects (not via brew.packages/brew.casks) but still managed
-# here so the cleanup step doesn't flag them for removal.
-_SIDEEFFECT_CASKS = ["docker-desktop"]  # installed via os.system below if docker absent
-
-
-# Docker Desktop needs os.system for the launchctl sudo prompt (only if not installed)
-if not shutil.which("docker"):
-    print("Installing docker-desktop...")
-    os.system("brew install --cask docker-desktop")
-
 
 # ============================================================
 # SECTION 1: TAPS & TRUST
@@ -175,8 +165,8 @@ brew.tap(name="Tap AnomalyCo Opencode", src="anomalyco/tap")
 brew.tap(name="Tap Databricks", src="databricks/tap")
 
 server.shell(
-    name="Trust managed tap formulae",
-    commands=[f"brew trust --formula {f}" for f in _TAP_FORMULAE_TO_TRUST],
+    name="Trust managed taps",
+    commands=[f"brew trust {t}" for t in TAPS],
 )
 
 
@@ -264,6 +254,12 @@ for src, dest in configs_to_sync.items():
         dest=os.path.expanduser(dest),
     )
 
+files.put(
+    name="Sync ~/.brew_tap_trust",
+    src=io.StringIO("\n".join(f"brew trust {t} 2>/dev/null || true" for t in TAPS) + "\n"),
+    dest=os.path.expanduser("~/.brew_tap_trust"),
+)
+
 _template_configs = [
     ("~/.secrets", "secrets", ["JIRA_API_TOKEN"], "0600"),
     ("~/.config/.jira/.config.yml", "jira_config", [
@@ -304,7 +300,7 @@ def _short_name(f):
 _brewfile_lines = (
     [f'tap "{t}"' for t in TAPS]
     + [f'brew "{_short_name(f)}"' for f in CODING_FORMULAE + WORK_FORMULAE + CLI_FORMULAE]
-    + [f'cask "{c}"' for c in PERSONAL_CASKS + EVAL_CASKS + GUI_CASKS + _SIDEEFFECT_CASKS]
+    + [f'cask "{c}"' for c in PERSONAL_CASKS + EVAL_CASKS + GUI_CASKS]
 )
 
 files.put(
@@ -318,8 +314,8 @@ _user_confirmed = [False]
 
 def _preview_and_confirm():
     import subprocess
-    for _formula in _TAP_FORMULAE_TO_TRUST:
-        os.system(f"brew trust --formula {_formula} 2>/dev/null")
+    for _tap in TAPS:
+        os.system(f"brew trust {_tap} 2>/dev/null")
     print("\n--- Brew drift preview (packages not in deploy.py) ---")
     subprocess.run(
         ["brew", "bundle", "cleanup", "--file=/tmp/pyinfra-managed-brewfile"]
@@ -337,6 +333,7 @@ python.call(
 server.shell(
     name="Remove packages not in deploy.py",
     commands=[
+        *[f"brew trust {t} 2>/dev/null || true" for t in TAPS],
         "brew bundle cleanup --force --file=/tmp/pyinfra-managed-brewfile",
         "brew autoremove",
     ],
