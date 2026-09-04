@@ -339,3 +339,57 @@ server.shell(
     ],
     _if=lambda: _user_confirmed[0],
 )
+
+
+# ============================================================
+# SECTION 8: OPENCODE CONFIG
+# ============================================================
+_deploy_dir = str(pathlib.Path(__file__).parent)
+os.environ.setdefault(
+    "OPENCODE_SKILLS_PATH",
+    os.path.join(_deploy_dir, "opencode-config", "skills"),
+)
+
+files.directory(
+    name="Ensure ~/.config/opencode exists",
+    path=os.path.expanduser("~/.config/opencode"),
+    present=True,
+)
+
+_deploy_template(
+    "~/.config/opencode/opencode.jsonc",
+    "opencode_config.jsonc",
+    ["OPENCODE_SKILLS_PATH"],
+)
+
+files.put(
+    name="Sync OpenCode AGENTS.md",
+    src=str(pathlib.Path(__file__).parent / "files" / "opencode_agents.md"),
+    dest=os.path.expanduser("~/.config/opencode/AGENTS.md"),
+)
+
+files.put(
+    name="Sync OpenCode package.json",
+    src=str(pathlib.Path(__file__).parent / "opencode-config" / "package.json"),
+    dest=os.path.expanduser("~/.config/opencode/package.json"),
+)
+
+server.shell(
+    name="Install OpenCode plugins",
+    commands=["cd ~/.config/opencode && npm install --silent"],
+    _if=lambda: not os.path.exists(
+        os.path.expanduser("~/.config/opencode/node_modules")
+    ),
+)
+
+files.directory(
+    name="Ensure ~/.config/opencode/plugins exists",
+    path=os.path.expanduser("~/.config/opencode/plugins"),
+    present=True,
+)
+
+files.put(
+    name="Sync skill-freshness plugin",
+    src=str(pathlib.Path(__file__).parent / "opencode-config" / "plugins" / "skill-freshness.ts"),
+    dest=os.path.expanduser("~/.config/opencode/plugins/skill-freshness.ts"),
+)

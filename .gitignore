@@ -165,3 +165,9 @@ cython_debug/
 
 *.ini
 .DS_Store
+# Org-specific OpenCode skills — sensitive internal content, backed up to SSD
+opencode-config/skills/naturalis-opentofu/
+opencode-config/skills/naturalis-terraform-pitfalls/
+opencode-config/skills/biocloud-databricks/
+opencode-config/skills/biocloud-pyinfra/
+opencode-config/skills/aws-cli/
