@@ -344,7 +344,7 @@ server.shell(
 # ============================================================
 # SECTION 8: OPENCODE CONFIG
 # ============================================================
-_deploy_dir = str(pathlib.Path(__file__).parent)
+_deploy_dir = str(pathlib.Path(__file__).resolve().parent)
 os.environ.setdefault(
     "OPENCODE_SKILLS_PATH",
     os.path.join(_deploy_dir, "opencode-config", "skills"),
