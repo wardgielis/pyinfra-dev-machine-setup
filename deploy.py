@@ -432,3 +432,78 @@ files.put(
     src=str(pathlib.Path(__file__).parent / "reaper-config" / "reaper-mouse.ini"),
     dest=os.path.join(_reaper_dir, "reaper-mouse.ini"),
 )
+
+
+
+# ============================================================
+# SECTION 10: MACOS SYSTEM PREFERENCES (GNOME-LIKE SETUP)
+# ============================================================
+
+server.shell(
+    name="Configure Dock (GNOME-like)",
+    commands=[
+        # Auto-hide the Dock — like GNOME's hidden bottom bar
+        "defaults write com.apple.dock autohide -bool true",
+        # Don't show recent apps in Dock
+        "defaults write com.apple.dock show-recents -bool false",
+        # Faster Dock show/hide animation (snappier like GNOME)
+        "defaults write com.apple.dock autohide-delay -float 0.0",
+        "defaults write com.apple.dock autohide-time-modifier -float 0.4",
+        # Faster Mission Control / Expose animation
+        "defaults write com.apple.dock expose-animation-duration -float 0.1",
+        # Don't auto-rearrange Spaces — GNOME keeps workspaces in fixed order
+        "defaults write com.apple.dock mru-spaces -bool false",
+        # Hot corner: top-left = Mission Control (like GNOME Activities overview)
+        "defaults write com.apple.dock wvous-tl-corner -int 2",
+        "defaults write com.apple.dock wvous-tl-modifier -int 0",
+        "killall Dock",
+    ],
+)
+
+server.shell(
+    name="Configure Finder (GNOME-like)",
+    commands=[
+        # Show hidden files — Linux default behavior
+        "defaults write com.apple.finder AppleShowAllFiles -bool true",
+        # List view as default — closer to Nautilus list view
+        "defaults write com.apple.finder FXPreferredViewStyle -string 'Nlsv'",
+        # Show external drives on Desktop
+        "defaults write com.apple.finder ShowExternalHardDrivesOnDesktop -bool true",
+        "killall Finder",
+    ],
+)
+
+server.shell(
+    name="Configure global macOS settings (GNOME-like)",
+    commands=[
+        # Dark mode
+        "defaults write NSGlobalDomain AppleInterfaceStyle -string 'Dark'",
+        # Double-click title bar maximizes window — GNOME default behavior
+        "defaults write NSGlobalDomain AppleActionOnDoubleClick -string 'Maximize'",
+        # Disable swipe back/forward in browsers (conflicts with workspace gestures)
+        "defaults write NSGlobalDomain AppleEnableSwipeNavigateWithScrolls -bool false",
+        # Always use tabs when opening documents
+        "defaults write NSGlobalDomain AppleWindowTabbingMode -string 'always'",
+        # Full keyboard access — Tab cycles through all UI controls, not just text fields
+        "defaults write NSGlobalDomain AppleKeyboardUIMode -int 3",
+        # Faster key repeat — Linux/GNOME terminal feel
+        "defaults write NSGlobalDomain KeyRepeat -int 2",
+        "defaults write NSGlobalDomain InitialKeyRepeat -int 25",
+        # Disable automatic window animations (snappier)
+        "defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false",
+        # Custom menu keyboard shortcuts: Cmd+L = Lock Screen, Cmd+. = Emoji & Symbols
+        "defaults write NSGlobalDomain NSUserKeyEquivalents -dict-add 'Lock Screen' '@l' 'Emoji & Symbols' '@.'",
+    ],
+)
+
+server.shell(
+    name="Configure trackpad (GNOME-like)",
+    commands=[
+        # Tap to click — common on Linux trackpads
+        "defaults write com.apple.AppleMultitouchTrackpad Clicking -bool true",
+        "defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true",
+        # Three-finger drag to move windows — closest to GNOME's Super+drag-to-move
+        "defaults write com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag -bool true",
+        "defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag -bool true",
+    ],
+)
