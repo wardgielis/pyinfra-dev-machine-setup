@@ -72,6 +72,7 @@ EVAL_CASKS = [          # Trying these out — promote or drop as needed
     "zen",
     "keepingyouawake",
     "headlamp",         # docker desktop equivalent for k8s
+    "marta",            # Keyboard-driven file manager (Nautilus-like alternative to Finder)
 ]
 
 GUI_CASKS = [
@@ -469,6 +470,20 @@ server.shell(
         "defaults write com.apple.finder FXPreferredViewStyle -string 'Nlsv'",
         # Show external drives on Desktop
         "defaults write com.apple.finder ShowExternalHardDrivesOnDesktop -bool true",
+        # Show path bar at bottom — like Nautilus breadcrumb bar
+        "defaults write com.apple.finder ShowPathbar -bool true",
+        # Show status bar at bottom (item count, disk space)
+        "defaults write com.apple.finder ShowStatusBar -bool true",
+        # Search current folder by default (not whole Mac) — Nautilus behavior
+        "defaults write com.apple.finder FXDefaultSearchScope -string 'SCcf'",
+        # Keep folders on top when sorting by name
+        "defaults write com.apple.finder _FXSortFoldersFirst -bool true",
+        # Always show file extensions
+        "defaults write NSGlobalDomain AppleShowAllExtensions -bool true",
+        # Disable warning when changing file extension
+        "defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false",
+        # Show full POSIX path in Finder window title
+        "defaults write com.apple.finder _FXShowPosixPathInTitle -bool true",
         "killall Finder",
     ],
 )
