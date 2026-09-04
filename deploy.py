@@ -60,6 +60,12 @@ for _tap in TAPS:
 
 PERSONAL_CASKS = [
     "league-of-legends",  # Games
+    "claude",             # Anthropic desktop app
+    "brave-browser",      # Privacy-focused browser
+    "spotify",            # Music streaming
+    "logi-options+",      # Logitech mouse/keyboard software
+    "ente-auth",          # 2FA authenticator
+    "ilok-license-manager", # Audio plugin licenses
 ]
 
 EVAL_CASKS = [          # Trying these out — promote or drop as needed
@@ -93,6 +99,9 @@ GUI_CASKS = [
 
     # Container management (replaces Docker Desktop)
     "podman-desktop",
+
+    # JetBrains IDE manager
+    "jetbrains-toolbox",
 ]
 
 CODING_FORMULAE = [
@@ -392,4 +401,34 @@ files.put(
     name="Sync skill-freshness plugin",
     src=str(pathlib.Path(__file__).parent / "opencode-config" / "plugins" / "skill-freshness.ts"),
     dest=os.path.expanduser("~/.config/opencode/plugins/skill-freshness.ts"),
+)
+
+
+# ============================================================
+# SECTION 9: REAPER CONFIG
+# ============================================================
+_reaper_dir = os.path.expanduser("~/Library/Application Support/REAPER")
+
+files.directory(
+    name="Ensure REAPER ColorThemes dir exists",
+    path=os.path.join(_reaper_dir, "ColorThemes"),
+    present=True,
+)
+
+files.put(
+    name="Sync Reapertips theme",
+    src=str(pathlib.Path(__file__).parent / "reaper-config" / "ColorThemes" / "Reapertips Theme.ReaperThemeZip"),
+    dest=os.path.join(_reaper_dir, "ColorThemes", "Reapertips Theme.ReaperThemeZip"),
+)
+
+files.put(
+    name="Sync reaper-themeconfig.ini",
+    src=str(pathlib.Path(__file__).parent / "reaper-config" / "reaper-themeconfig.ini"),
+    dest=os.path.join(_reaper_dir, "reaper-themeconfig.ini"),
+)
+
+files.put(
+    name="Sync reaper-mouse.ini",
+    src=str(pathlib.Path(__file__).parent / "reaper-config" / "reaper-mouse.ini"),
+    dest=os.path.join(_reaper_dir, "reaper-mouse.ini"),
 )
