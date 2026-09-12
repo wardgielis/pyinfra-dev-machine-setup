@@ -72,7 +72,8 @@ EVAL_CASKS = [          # Trying these out — promote or drop as needed
     "zen",
     "keepingyouawake",
     "headlamp",         # docker desktop equivalent for k8s
-    "openinterminal",   # Adds "Open Terminal here" toolbar button to Finder
+    # openinterminal removed — Ghostty registers its own "New Ghostty Window Here"
+    # service natively; enabled via defaults write pbs in Section 10 below
 ]
 
 GUI_CASKS = [
@@ -528,6 +529,16 @@ server.shell(
         # Tap to click — common on Linux trackpads
         "defaults write com.apple.AppleMultitouchTrackpad Clicking -bool true",
         "defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true",
+    ],
+)
+
+server.shell(
+    name="Enable Ghostty Finder services",
+    commands=[
+        # Activate Ghostty's built-in macOS services in the Finder right-click menu
+        "defaults write pbs NSServicesStatus -dict-add 'com.mitchellh.ghostty - New Ghostty Window Here - openWindow' '{enabled_context_menu = 1; enabled_services_menu = 1;}'",
+        "defaults write pbs NSServicesStatus -dict-add 'com.mitchellh.ghostty - New Ghostty Tab Here - openTab' '{enabled_context_menu = 1; enabled_services_menu = 1;}'",
+        "/System/Library/CoreServices/pbs -update",
     ],
 )
 
