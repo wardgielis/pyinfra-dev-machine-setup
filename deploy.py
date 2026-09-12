@@ -72,7 +72,7 @@ EVAL_CASKS = [          # Trying these out — promote or drop as needed
     "zen",
     "keepingyouawake",
     "headlamp",         # docker desktop equivalent for k8s
-    "marta",            # Keyboard-driven file manager (Nautilus-like alternative to Finder)
+    "openinterminal",   # Adds "Open Terminal here" toolbar button to Finder
 ]
 
 GUI_CASKS = [
@@ -525,5 +525,78 @@ server.shell(
         # Tap to click — common on Linux trackpads
         "defaults write com.apple.AppleMultitouchTrackpad Clicking -bool true",
         "defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true",
+    ],
+)
+
+server.shell(
+    name="Disable noisy Apple services",
+    commands=[
+        # Disable Siri service and menu bar icon
+        "defaults write com.apple.assistant.support 'Assistant Enabled' -bool false",
+        "defaults write com.apple.Siri StatusMenuVisible -bool false",
+        "defaults write com.apple.Siri SiriPrefStashedStatusMenuVisible -bool false",
+        # Disable Siri Suggestions and web search in Spotlight — local results only
+        (
+            "defaults write com.apple.spotlight orderedItems -array"
+            " '{enabled = 1; name = APPLICATIONS;}'"
+            " '{enabled = 1; name = SYSTEM_PREFS;}'"
+            " '{enabled = 1; name = DIRECTORIES;}'"
+            " '{enabled = 1; name = PDF;}'"
+            " '{enabled = 1; name = FONTS;}'"
+            " '{enabled = 1; name = DOCUMENTS;}'"
+            " '{enabled = 1; name = MESSAGES;}'"
+            " '{enabled = 1; name = CONTACT;}'"
+            " '{enabled = 1; name = EVENT_TODO;}'"
+            " '{enabled = 1; name = IMAGES;}'"
+            " '{enabled = 1; name = BOOKMARKS;}'"
+            " '{enabled = 0; name = MUSIC;}'"
+            " '{enabled = 0; name = MOVIES;}'"
+            " '{enabled = 0; name = PRESENTATIONS;}'"
+            " '{enabled = 0; name = SPREADSHEETS;}'"
+            " '{enabled = 0; name = SOURCE;}'"
+            " '{enabled = 0; name = MENU_DEFINITION;}'"
+            " '{enabled = 0; name = MENU_OTHER;}'"
+            " '{enabled = 0; name = MENU_CONVERSION;}'"
+            " '{enabled = 0; name = MENU_EXPRESSION;}'"
+            " '{enabled = 0; name = MENU_WEBSEARCH;}'"
+            " '{enabled = 0; name = MENU_SPOTLIGHT_SUGGESTIONS;}'"
+        ),
+        # Disable Game Center menu bar icon
+        "defaults write com.apple.GameCenter GKShowOnMenuBar -bool false",
+        # Silent crash reporter — no more popup dialogs
+        "defaults write com.apple.CrashReporter DialogType -string 'none'",
+        # Prevent .DS_Store files on network and USB/external volumes
+        "defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true",
+        "defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true",
+    ],
+)
+
+server.shell(
+    name="Disable autocorrect and smart punctuation",
+    commands=[
+        # Disable spell autocorrect
+        "defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false",
+        # Disable auto-capitalisation
+        "defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false",
+        # Disable smart dashes (-- → —)
+        "defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false",
+        # Disable period insertion on double-space
+        "defaults write NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool false",
+        # Disable smart quotes (" → "")
+        "defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false",
+    ],
+)
+
+files.put(
+    name="Deploy global gitignore",
+    src=str(pathlib.Path(__file__).parent / "files" / "gitignore_global"),
+    dest=os.path.expanduser("~/.gitignore_global"),
+    mode="0644",
+)
+
+server.shell(
+    name="Configure global gitignore",
+    commands=[
+        "git config --global core.excludesfile ~/.gitignore_global",
     ],
 )
