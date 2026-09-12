@@ -283,6 +283,8 @@ _template_configs = [
         "AWS_ACCOUNT_ID", "AWS_LOGIN_EMAIL",
         "AWS_AIRFLOW_PROD_ACCESS_KEY_ID", "AWS_AIRFLOW_PROD_SECRET_ACCESS_KEY",
         "AWS_AIRFLOW_DEV_ACCESS_KEY_ID", "AWS_AIRFLOW_DEV_SECRET_ACCESS_KEY",
+        "AWS_NDOR_AIRFLOW_ACCESS_KEY_ID", "AWS_NDOR_AIRFLOW_SECRET_ACCESS_KEY",
+        "AWS_NDOR_DATABRICKS_ACCESS_KEY_ID", "AWS_NDOR_DATABRICKS_SECRET_ACCESS_KEY",
     ], "0600"),
 ]
 
@@ -364,6 +366,12 @@ files.directory(
     name="Ensure ~/.config/opencode exists",
     path=os.path.expanduser("~/.config/opencode"),
     present=True,
+)
+
+files.directory(
+    name="Remove legacy ~/.config/opencode/skills (repo is source of truth)",
+    path=os.path.expanduser("~/.config/opencode/skills"),
+    present=False,
 )
 
 _deploy_template(
@@ -517,8 +525,5 @@ server.shell(
         # Tap to click — common on Linux trackpads
         "defaults write com.apple.AppleMultitouchTrackpad Clicking -bool true",
         "defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true",
-        # Three-finger drag to move windows — closest to GNOME's Super+drag-to-move
-        "defaults write com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag -bool true",
-        "defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag -bool true",
     ],
 )

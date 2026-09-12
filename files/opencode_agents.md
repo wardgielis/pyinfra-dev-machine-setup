@@ -14,7 +14,7 @@ Read({ file_path: "<location from available_skills>" })
 ```
 
 The `<location>` is the absolute path shown in the `<available_skills>` block,
-e.g. `~/.config/opencode/skills/pyinfra/SKILL.md`
+e.g. `~/pyinfra-dev-machine-setup/opencode-config/skills/pyinfra/SKILL.md`
 
 ## Session Start
 
@@ -51,12 +51,21 @@ This prevents repeating mistakes and ensures you work from the most accurate, pr
 
 ## Creating New Skills
 
-When creating a new skill or helping the user document a new workflow, always write it to
-`~/pyinfra-dev-machine-setup/opencode-config/skills/<name>/SKILL.md`.
+Follow the repo's skill-authoring workflow: write skills to
+`~/pyinfra-dev-machine-setup/opencode-config/skills/<name>/SKILL.md` and follow the
+naming/frontmatter/validation rules. Full procedure: load the **[[opencode]]** skill.
 
-- **Generic skills**: commit normally — they're public and version-controlled
-- **Org-specific skills** (internal infrastructure, workspace URLs, org names, credentials):
-  add the directory to `.gitignore` in the repo, then remind the user to copy it to their SSD backup
+## Editing OpenCode config, plugins, or AGENTS.md
+
+OpenCode assets are managed in the repo, not in `~/.config/opencode`:
+
+- Config → `files/opencode_config.jsonc` (deployed as `~/.config/opencode/opencode.jsonc`)
+- Plugins → `opencode-config/plugins/` (+ `opencode-config/package.json` deps)
+- AGENTS.md → `files/opencode_agents.md`
+- Skills → `opencode-config/skills/<name>/SKILL.md`
+
+Edit the repo file, then sync via `deploy.py` Section 8. Never hand-edit `~/.config/opencode`.
+Full workflow: load the **[[opencode]]** skill.
 
 ## Keeping AGENTS.md up to date
 

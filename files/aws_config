@@ -17,3 +17,12 @@ aws_secret_access_key = ${AWS_AIRFLOW_DEV_SECRET_ACCESS_KEY}
 [default]
 login_session = arn:aws:sts::${AWS_ACCOUNT_ID}:assumed-role/role.saml.biocloud/${AWS_LOGIN_EMAIL}
 region = us-east-1
+
+# To test NDOR Access
+[profile ndor_airflow]
+aws_access_key_id = ${AWS_NDOR_AIRFLOW_ACCESS_KEY_ID}
+aws_secret_access_key = ${AWS_NDOR_AIRFLOW_SECRET_ACCESS_KEY}
+
+[profile ndor_databricks]
+aws_access_key_id = ${AWS_NDOR_DATABRICKS_ACCESS_KEY_ID}
+aws_secret_access_key = ${AWS_NDOR_DATABRICKS_SECRET_ACCESS_KEY}
