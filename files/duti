@@ -1,0 +1,67 @@
+# Default file type associations
+# Format: <bundle-id> <extension> <role>
+# Role: all = open/view/edit; viewer = read-only open
+
+# ── Video → IINA ────────────────────────────────────────────────────────────
+com.colliderli.iina    mp4    all
+com.colliderli.iina    mkv    all
+com.colliderli.iina    avi    all
+com.colliderli.iina    mov    all
+com.colliderli.iina    m4v    all
+com.colliderli.iina    webm   all
+com.colliderli.iina    flv    all
+com.colliderli.iina    wmv    all
+com.colliderli.iina    mpeg   all
+com.colliderli.iina    mpg    all
+com.colliderli.iina    ts     all
+com.colliderli.iina    m2ts   all
+
+# ── Audio → IINA (prevents Apple Music from opening local files) ─────────────
+com.colliderli.iina    mp3    all
+com.colliderli.iina    m4a    all
+com.colliderli.iina    flac   all
+com.colliderli.iina    wav    all
+com.colliderli.iina    aac    all
+com.colliderli.iina    ogg    all
+com.colliderli.iina    opus   all
+com.colliderli.iina    wma    all
+
+# ── Text & code → VSCodium ──────────────────────────────────────────────────
+# Catch-all: extensionless text files (Dockerfile, Makefile, README, etc.)
+com.vscodium    public.plain-text    all
+# Structured data
+com.vscodium    json      all
+com.vscodium    txt       all
+com.vscodium    md        all
+com.vscodium    yaml      all
+com.vscodium    yml       all
+com.vscodium    csv       all
+com.vscodium    toml      all
+com.vscodium    xml       all
+com.vscodium    parquet   all
+# Scripts & dotfiles
+com.vscodium    env           all
+com.vscodium    py            all
+com.vscodium    sh            all
+com.vscodium    zsh           all
+com.vscodium    bash          all
+com.vscodium    sql           all
+com.vscodium    conf          all
+com.vscodium    cfg           all
+com.vscodium    ini           all
+com.vscodium    log           all
+com.vscodium    gitignore     all
+com.vscodium    dockerignore  all
+com.vscodium    editorconfig  all
+
+# ── Images → Preview (prevents Apple Photos from grabbing them) ──────────────
+com.apple.Preview    jpg     all
+com.apple.Preview    jpeg    all
+com.apple.Preview    png     all
+com.apple.Preview    gif     all
+com.apple.Preview    bmp     all
+com.apple.Preview    tiff    all
+com.apple.Preview    tif     all
+com.apple.Preview    webp    all
+com.apple.Preview    heic    all
+com.apple.Preview    heif    all

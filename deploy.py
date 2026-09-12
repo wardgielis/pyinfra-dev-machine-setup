@@ -98,6 +98,9 @@ GUI_CASKS = [
     # Video editing
     "kdenlive",
 
+    # Media player — replaces QuickTime/Apple Music/Apple TV for local files
+    "iina",
+
     # Container management (replaces Docker Desktop)
     "podman-desktop",
 
@@ -164,6 +167,7 @@ CLI_FORMULAE = [
     "helm",        # Kubernetes package manager
     # Modern Text Editor
     "micro",  # nano replacement using nano as alias
+    "duti",   # Set default apps for file types from the command line
 ]
 
 # ============================================================
@@ -598,5 +602,19 @@ server.shell(
     name="Configure global gitignore",
     commands=[
         "git config --global core.excludesfile ~/.gitignore_global",
+    ],
+)
+
+files.put(
+    name="Deploy file type associations (duti)",
+    src=str(pathlib.Path(__file__).parent / "files" / "duti"),
+    dest=os.path.expanduser("~/.duti"),
+    mode="0644",
+)
+
+server.shell(
+    name="Apply file type associations",
+    commands=[
+        "duti ~/.duti",
     ],
 )
