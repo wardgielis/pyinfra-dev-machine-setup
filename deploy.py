@@ -110,7 +110,6 @@ GUI_CASKS = [
 
 CODING_FORMULAE = [
     "anomalyco/tap/opencode",  # Installing opencode via tap gives the quickest updates
-    "mistral-vibe",            # Mistral's vibe coding agent — evaluating alongside opencode
 ]
 
 WORK_FORMULAE = [
