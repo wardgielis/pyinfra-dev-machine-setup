@@ -130,6 +130,7 @@ CLI_FORMULAE = [
     "ripgrep",    # Better grep
     "fd",         # Better find
     "fastfetch",  # System info
+    "node",       # Node.js runtime & npm package manager
     # System monitors
     "dust",       # Better du
     "btop",       # Better top
