@@ -154,3 +154,16 @@ function y() {
     fi
     rm -f -- "$tmp"
 }
+
+# ==========================================
+# 9. AWS LOGIN
+# Chains the Entra ID browser sign-in and `aws login` into one command,
+# since PyCharm Big Data Tools' credential_process refresh dies when the
+# console-credentials refresh token gets invalidated.
+# ==========================================
+function awsauth() {
+    open "https://launcher.myapps.microsoft.com/api/signin/33cfc22f-6810-4e00-83f5-7ba7fc135fe1?tenantId=8cd24984-0aa3-4fc5-b09b-4d6ecfaa58fb"
+    sleep 3
+    aws login
+    aws sts get-caller-identity --profile pycharm
+}
