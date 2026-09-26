@@ -72,8 +72,7 @@ EVAL_CASKS = [          # Trying these out — promote or drop as needed
     "zen",
     "keepingyouawake",
     "headlamp",         # docker desktop equivalent for k8s
-    # openinterminal removed — Ghostty registers its own "New Ghostty Window Here"
-    # service natively; enabled via defaults write pbs in Section 10 below
+    "claude-code",
 ]
 
 GUI_CASKS = [
