@@ -456,6 +456,41 @@ Practical consequence for us: the platform repo's `clusters/` and `projects/` di
 
 app-of-apps (a root `Application` whose manifests are child `Application`s) is the simpler concept and the right first step at stage 4 of §1. ApplicationSet is strictly better once you have more than a handful of apps: no ordering assumptions, no commits needed to add an app, and generators that follow the directory structure. Use app-of-apps for the **platform root** (a short, deliberate, hand-written list) and ApplicationSet for **applications** (many, repetitive, auto-discovered).
 
+### 6.5 Choosing a generator for a GitLab monorepo
+
+One repo with a directory per service is our layout (§4), so the choice is between three generators. Pick by *what varies*:
+
+| Generator | Use when | Parameters you get |
+|---|---|---|
+| **git: directories** | One Application per directory, config lives in the path itself | `path.path`, `path.basename`, `path.basenameNormalized`, `path[n]` |
+| **git: files** | Per-app settings that do not fit in a path — replica counts, chart versions, owners | Everything in the discovered YAML/JSON file, plus `path.*` of the file |
+| **matrix** | The cross-product: every app × every cluster or environment | The merged keys of both children |
+
+The file generator is the one people reach for too late. If you find yourself encoding values into directory names, switch:
+
+```yaml
+generators:
+  - git:
+      repoURL: https://gitlab.example.org/group/platform.git
+      revision: main
+      files:
+        - path: "apps/*/config.yaml"     # each file's contents become parameters
+```
+
+Four rules that prevent the common failures:
+
+- **`exclude` beats `include`, and list order is irrelevant.** The docs are explicit: if a directory matches *at least one* `exclude` pattern it is excluded, regardless of where the include appears in the list. So `path: "apps/*"` plus `exclude: "apps/base/*"` cannot be rescued by adding a later include for `apps/base/special` — you must narrow the exclude instead. Directories beginning with `.` are excluded automatically.
+- **`pathParamPrefix` is mandatory when both matrix children are git generators.** Both auto-populate `path`-prefixed parameters, and a matrix generator **fails** when its children produce identical keys with different values. Set `pathParamPrefix` on one or both children.
+- **A missing file is not an error, it is an empty set.** If the glob matches nothing, the generator produces no Applications and the existing ones get pruned. Combined with `preserveResourcesOnDeletion: false` (the default), a typo'd glob or a directory rename can delete live workloads. This is the strongest argument for the CI render gate in §10.6.
+- **Generators are a separate reconciliation loop.** They do not follow `timeout.reconciliation` and they need their own webhook — see §10.3.
+
+If you ever scan *multiple repositories* instead of one monorepo, the SCM provider generator has two GitLab-specific traps:
+
+- **`includeSharedProjects` defaults to `true`**, which pulls in projects merely *shared* with your subgroups — not ones that live there. The docs note that most people want `false`. Left at the default on a large self-managed instance, you generate Applications for other teams' projects.
+- **`includeSubgroups` defaults to `false`**, so a nested group structure silently yields nothing. Set `api:` to your instance URL, and `caRef:` (preferably over `insecure: true`) for a self-signed certificate.
+
+If the applicationset-controller must reach the GitLab API through a proxy, it takes dedicated flags — the generic `HTTPS_PROXY` is not used for SCM calls: `--scm-proxy-url` and `--scm-no-proxy`, also settable as `ARGOCD_APPLICATIONSET_CONTROLLER_SCM_PROXY_URL` and `ARGOCD_APPLICATIONSET_CONTROLLER_SCM_NO_PROXY`.
+
 ---
 
 ## 7. Sync phases, waves and hooks
@@ -771,6 +806,61 @@ kubectl get cm argocd-cm -n argocd \
 Install it anyway. With Argo CD it still provides: the Kubernetes dashboard in GitLab (needs `user_access`), `$KUBECONFIG`/`$KUBE_CONTEXT` in CI jobs for validation and `kubectl diff` gates, and outbound-only cluster access with no inbound 6443 rule. See [[kubernetes]] §5 and [[naturalis-kubernetes]] §2 for the `kasAddress` configuration, which is the usual installation mistake.
 
 What you do **not** use is the agent's Flux `Receiver` auto-detection — that is Flux-specific, and §10.3 is the Argo CD equivalent.
+
+Reaching the cluster from a laptop goes through the agent too: `glab cluster agent update-kubeconfig --agent <id> --use-context`. See [[glab-cli]].
+
+### 10.6 The MR diff gate — the review step Argo CD does not give you
+
+Argo CD syncs what is merged. The review happens in the merge request, so the diff has to be rendered **there** — otherwise the first time anyone sees the effect of a values change is after it is live. This is the single most valuable piece of GitLab integration in an Argo CD setup, and it replaces the `plan`/`apply` split you get from OpenTofu.
+
+```yaml
+argocd:diff:
+  stage: diff
+  image: quay.io/argoproj/argocd:v3.5.4
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - argocd login "$ARGOCD_SERVER" --auth-token "$ARGOCD_AUTH_TOKEN" --grpc-web
+    # --server-side-generate renders with the repo-server, so Helm/Kustomize
+    # versions and plugins match production exactly.
+    - |
+      argocd app diff "$APP" \
+        --local "apps/$APP/overlays/$CI_ENVIRONMENT_NAME" \
+        --local-repo-root "$CI_PROJECT_DIR" \
+        --server-side-generate \
+        --diff-exit-code 20 > diff.txt || [ $? -eq 20 ]
+    - cat diff.txt
+  artifacts:
+    paths: [diff.txt]
+    expire_in: 1 week
+```
+
+Details that matter:
+
+- **Use `--server-side-generate`.** Without it the CLI renders locally, so your runner's Helm/Kustomize version decides the output and a local-only diff can disagree with what the repo-server will produce.
+- **Exit codes are load-bearing.** `argocd app diff` returns `1` when a diff exists, `2` on a general error, and `0` when clean — and `--exit-code` defaults to `true`. A naive `script:` therefore fails the job on every change. Set `--diff-exit-code 20` to separate "there is a diff" from "the command broke", then allow only that code.
+- **`--local-repo-root` must be the repo root** (`$CI_PROJECT_DIR`), not the app path, or relative references resolve wrongly.
+- **Secrets are excluded from the diff by design**, so an `ExternalSecret` change shows as a diff on the CR but never reveals values. That is the correct behaviour, not a gap.
+- **Grant the CI token read-only access.** An AppProject role with `get` on applications is enough; do not use an admin token for a gate that only reads. See §12.
+
+Put this job in a `diff` stage ahead of merge, and pair it with manifest validation ([[kubernetes]] §16) so schema errors fail before the diff is even rendered.
+
+### 10.7 Merge request preview environments
+
+A per-MR environment is the one case where generating Applications from GitLab's API beats the directory generator, because the unit of work is a *merge request*, not a directory.
+
+**The PR generator does not support GitLab.** Argo CD's pull request generator supports GitHub, Gitea and Bitbucket Server; GitLab is not in that list. So on GitLab you have two realistic options:
+
+1. **Let CI write a directory.** The MR pipeline commits `previews/mr-$CI_MERGE_REQUEST_IID/` to a long-lived branch, and an ordinary git directory generator (§6.1) turns it into an Application. The MR's own `on_stop` job removes the directory, and the generator prunes the Application. This stays within tooling you already run.
+2. **Let CI create the `Application` directly** with `argocd app create`, scoped to a dedicated `AppProject` with a namespace allow-list. Simpler to write, but it puts live state outside Git — acceptable for ephemeral previews, not for anything durable.
+
+Either way, three guardrails are not optional:
+
+- **A dedicated `AppProject`** with `destinations` restricted to `preview-*` namespaces and no cluster-scoped resource permissions, so a preview cannot touch the platform.
+- **A TTL.** Previews leak. Pair GitLab's `environment.auto_stop_in` with the cleanup job so an abandoned MR does not hold a namespace forever.
+- **Never point previews at production data.** Give the preview project its own `ClusterSecretStore` path, or it becomes a route to production credentials through an unreviewed branch.
+
+If you use the ApplicationSet route with a templated `project` field, remember §6.3: the source of truth must be admin-controlled, which means the MR cannot be allowed to choose its own project.
 
 ---
 
@@ -1177,7 +1267,7 @@ Verified against upstream release metadata on **8 October 2026**. Re-check befor
 | Argo Rollouts | v1.10.0 | Progressive delivery; separate decision from Argo CD itself |
 | Argo Workflows | v4.1.4 | In-cluster DAGs; see [[kubernetes]] §15.5 |
 | `argocd-agent` | **v0.10.0** | Pre-1.0. Multi-cluster pull model. Not a production topology yet (§16.3) |
-| External Secrets Operator | chart 2.12.0 | Check the served CRD `apiVersion` before writing manifests |
+| External Secrets Operator | v2.12.0 (chart 2.12.0) | Check the served CRD `apiVersion` before writing manifests. Set `audiences` — required from Vault 1.21 ([[kubernetes]] §12) |
 | Helm binary used for rendering | **v4** (since Argo CD 3.5) | `spec.source.helm.version` is legacy and ignored (§9.4) |
 | Kubernetes | v1.37.x | See [[kubernetes]] §20 for the support window |
 

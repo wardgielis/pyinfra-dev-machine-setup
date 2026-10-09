@@ -1,6 +1,6 @@
 ---
 name: airflow
-description: Generic Apache Airflow 3.x reference. Use when configuring Airflow (env vars, config sections), managing Variables and Connections, setting up OAuth/SSO (Azure AD, Keycloak), understanding 2.x→3.x migration changes, authoring DAGs, or checking best practices. Does NOT contain biocloud-specific DAG patterns — see [[airflow-dag]] for that.
+description: Generic Apache Airflow 3.x reference. Use when configuring Airflow (env vars, config sections), managing Variables and Connections, setting up OAuth/SSO (Azure AD, Keycloak), understanding 2.x→3.x migration changes, authoring DAGs, or checking best practices. Does NOT contain our org-specific DAG patterns — those live in the repo-local `airflow-dag` skill.
 metadata:
   review_after: "2026-08-13"
   docs_url: "https://airflow.apache.org/docs/apache-airflow/stable/"
@@ -9,7 +9,7 @@ metadata:
 
 # Apache Airflow 3.x Reference
 
-Generic reference for Airflow 3.x. For biocloud-specific DAG patterns, deployment, and cluster configs, see [[airflow-dag]].
+Generic reference for Airflow 3.x. For our own DAG patterns, deployment, and cluster configs, see the `airflow-dag` skill — it is repo-local to the data-platform repo (`.opencode/skills/airflow-dag/`), so a wikilink to it would not resolve from here.
 
 > **When answering questions like "can Airflow do X?", "in which version was Y added?", or "should we upgrade from 3.2.1?"** — fetch the live release notes before answering. The version table below gives quick orientation; the live page has the definitive detail:
 > `https://airflow.apache.org/docs/apache-airflow/stable/release_notes.html`
@@ -1089,4 +1089,4 @@ AIRFLOW__SECRETS__BACKEND_KWARGS='{"connections_prefix": "/airflow/connections",
 
 ## Related Skills
 
-- [[airflow-dag]]: biocloud-specific DAG patterns, CI placeholders, DAGConfig usage, Databricks cluster configs, deployment to S3
+- `airflow-dag` (repo-local, not linkable from here): our DAG patterns, CI placeholders, DAGConfig usage, Databricks cluster configs, deployment to S3

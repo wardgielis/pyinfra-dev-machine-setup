@@ -1,6 +1,6 @@
 ---
 name: kubernetes
-description: Use when working with Kubernetes — writing or reviewing manifests, Helm charts, Kustomize bases/overlays, choosing a control plane, GitOps (Argo CD, Flux), CI/CD through the GitLab agent, networking (Gateway API, NetworkPolicy, Cilium), autoscaling (HPA/VPA/KEDA/Karpenter), secrets (External Secrets Operator/Vault), security (Pod Security Standards, Kyverno), upgrades and version skew, or deploying services such as Airflow onto a cluster. Also covers how to lay out Kubernetes manifests in a monorepo and how to manage them at scale. Read [[argocd]] for our GitOps controller in depth, [[naturalis-kubernetes]] for org-specific conventions and [[biocloud-kubernetes]] for an implementation.
+description: Use when working with Kubernetes — writing or reviewing manifests, Helm charts, Kustomize bases/overlays, choosing a control plane, GitOps (Argo CD, Flux), CI/CD through the GitLab agent, networking (Gateway API, NetworkPolicy, Cilium), autoscaling (HPA/VPA/KEDA/Karpenter), secrets (External Secrets Operator/Vault), security (Pod Security Standards, Kyverno), upgrades and version skew, or deploying services such as Airflow onto a cluster. Also covers how to lay out Kubernetes manifests in a monorepo and how to manage them at scale. Read [[argocd]] for our GitOps controller in depth and [[naturalis-kubernetes]] for org-specific conventions.
 metadata:
   review_after: "2026-11-01"
   docs_url: "https://kubernetes.io/docs/concepts/configuration/best-practices/"
@@ -10,7 +10,9 @@ metadata:
 
 Operating manual for running Kubernetes: the mental model that prevents expensive mistakes, the monorepo layouts that keep manifests manageable, the GitLab integration, and the per-subsystem practices worth actually following.
 
-**Related skills**: [[argocd]] for Argo CD — our GitOps controller — in depth, [[naturalis-kubernetes]] for Naturalis/arise conventions (Vault, GitLab instance, OpenStack), [[biocloud-kubernetes]] for the biocloud-core implementation, [[gitlab-cicd]] for CI/CD and the Component Catalog, [[glab-cli]] for `glab`, [[opentofu]] / [[naturalis-opentofu]] for provisioning the machines underneath, [[pyinfra]] / [[biocloud-pyinfra]] for host configuration, [[airflow]] / [[airflow-dag]] for Airflow specifics, [[databricks]] / [[biocloud-databricks]] for Databricks, [[aws-cli]] for cloud verification.
+**Related skills**: [[argocd]] for Argo CD — our GitOps controller — in depth, [[naturalis-kubernetes]] for org conventions (Vault, the self-managed GitLab instance, OpenStack), [[gitlab-cicd]] for CI/CD and the Component Catalog, [[glab-cli]] for `glab`, [[opentofu]] / [[naturalis-opentofu]] for provisioning the machines underneath, [[pyinfra]] / [[biocloud-pyinfra]] for host configuration, [[airflow]] for Airflow specifics, [[databricks]] / [[biocloud-databricks]] for Databricks, [[aws-cli]] for cloud verification.
+
+Two related skills are **repo-local to other repositories**, so they are referenced by name rather than linked: `biocloud-kubernetes` (the concrete cluster implementation) and `airflow-dag` (our DAG patterns), both under `.opencode/skills/` in their own repos. A wikilink to either would resolve to nothing from here.
 
 ## Contents
 
@@ -364,6 +366,32 @@ If you are building Kubernetes on OpenStack VMs you own:
 - Back up etcd (`etcdctl snapshot save`) and store the snapshot somewhere outside the cluster. A cluster whose etcd backup lives inside the cluster is not backed up.
 - Keep the OpenStack security groups as your first network control layer, then Kubernetes `NetworkPolicy` for the second.
 
+### OpenStack platform integration
+
+**A self-managed cluster on OpenStack is not complete without this, and the symptoms of skipping it look like bugs elsewhere.** Vanilla Kubernetes has no idea it is running on OpenStack. Three components connect it:
+
+| Component | Provides | Symptom if missing |
+|---|---|---|
+| `openstack-cloud-controller-manager` (OCCM) | Node lifecycle and metadata, and `Service type=LoadBalancer` via Octavia | A `LoadBalancer` Service stays `<pending>` **forever**, with no event explaining why. Nodes may never clear the `uninitialized` taint, so nothing schedules |
+| `cinder-csi-plugin` | `PersistentVolume` provisioning from Cinder | PVCs stay `Pending`; or they bind but with AWS-shaped `StorageClass` parameters that Cinder rejects (§9.2) |
+| Octavia | The actual load balancers, and usually the control-plane VIP in an HA build | No externally reachable Service, no Gateway address, no HA API endpoint |
+
+Wiring it up:
+
+1. **kubelet needs `--cloud-provider=external`** on every node, set *before* `kubeadm join`. This is the step that is easiest to miss on a node added later: the new node joins, takes the `node.cloudprovider.kubernetes.io/uninitialized:NoSchedule` taint, and waits for a cloud controller to remove it. If OCCM is not running — or the node was joined without the flag so OCCM never claims it — the taint never clears and the node looks healthy while scheduling nothing.
+2. **OCCM reads a `cloud.conf`** from a Secret in `kube-system`, conventionally created as `kubectl create secret -n kube-system generic cloud-config --from-file=cloud.conf`. It holds the Keystone endpoint and credentials, plus `[LoadBalancer]`, `[BlockStorage]` and `[Networking]` sections.
+3. **Octavia is mandatory for load balancing.** OCCM's own documentation is explicit: Neutron-LBaaS support was **removed in OCCM v1.26.0**, so the current implementation is Octavia-only. Confirm with your OpenStack operator that Octavia is available and that your project has LB quota before designing anything around `type: LoadBalancer`.
+
+**If Octavia is not available, use MetalLB.** This is the realistic fallback on an OpenStack tenancy without LBaaS, and it changes the design, so decide early:
+
+- MetalLB in **L2 mode** answers ARP for an address pool you control, so the addresses must come from the node subnet, and OpenStack's port security will drop traffic for an address the port does not own. You must add the VIPs to the ports' `allowed_address_pairs` — this is the single step that makes "MetalLB on OpenStack" fail silently for people.
+- BGP mode needs a cooperating router, which you usually do not get in a tenant network.
+- MetalLB gives you `Service type=LoadBalancer`, which is all the Gateway API and ingress controllers need (§8) — a Gateway's address ultimately comes from a `LoadBalancer` Service, so without either Octavia or MetalLB a `Gateway` never gets an address and every route is unreachable.
+
+Two platform limitations worth knowing before you debug them: OpenStack availability zone names **must not contain blanks** for OCCM to work, and if the Cinder AZs do not match the Nova AZs you must set `ignore-volume-az: true` (§9.2).
+
+A provider-managed OpenStack Kubernetes service normally installs and operates all of this for you — which is a concrete argument for that path, not just a cost question.
+
 ---
 
 ## 4. Installation methods
@@ -376,6 +404,7 @@ If you are building Kubernetes on OpenStack VMs you own:
 | Argo CD `Application` / Flux `HelmRelease` | Any of the above, but GitOps | — |
 | `kpt` / Config Sync | You want Google's declarative inventory model | You are on GitLab and want the agent path |
 | Operator / CRD | The workload has a well-run operator | The operator is abandoned or immature |
+| Helmfile | You have many Helm releases and want one entrypoint | You have one or two releases |
 
 ### Preflight for a self-hosted node
 
@@ -392,7 +421,6 @@ If you are building Kubernetes on OpenStack VMs you own:
 | Container runtime | `systemd` cgroup, CRI socket enabled | Nodes register but never become ready |
 
 The cgroup driver mismatch is the one that costs the most time, because the runtime reports itself as healthy. A minimal runtime config (Docker's default `containerd` config, for instance) omits `SystemdCgroup`; generate a full default config rather than patching a minimal one.
-| Helmfile | You have many Helm releases and want one entrypoint | You have one or two releases |
 
 ### Helm notes
 
@@ -433,13 +461,17 @@ Consequences worth internalising:
 
 Prerequisites: a registered agent and an agent token from **Settings > CI/CD > Agents** (or `glab api`).
 
+> **If you run Argo CD, skip option 1 and use option 2 or 4.** `glab cluster agent bootstrap` is a *Flux* bootstrap: it requires `flux` on your `PATH`, expects the cluster to have been `flux bootstrap`-ed first, and commits Flux `HelmRepository`/`HelmRelease` resources to your repo before triggering a Flux reconciliation. GitLab calls it the recommended path because GitLab recommends Flux ([[argocd]] §10). Running it on an Argo CD cluster installs a second GitOps controller by accident, and you end up with Flux owning the agent while Argo CD owns everything else.
+
 ```sh
 # 1. Register and install with Flux support — GitLab's recommended path.
-#    Requires glab, kubectl and flux on your PATH.
+#    Requires glab, kubectl AND flux on your PATH, and a Flux-bootstrapped cluster.
+#    DO NOT use this on an Argo CD cluster — it installs Flux resources.
 flux bootstrap gitlab \
   --hostname <gitlab.example.org> \
   --owner <group> --repository <repo> --branch main \
   --path clusters/<env>
+# --manifest-path must match flux bootstrap's --path, or reconciliation fails
 glab cluster agent bootstrap <agent-name> --manifest-path clusters/<env>
 
 # 2. Or install the chart directly (no Flux).
@@ -449,8 +481,8 @@ helm upgrade --install <agent-name> gitlab/gitlab-agent \
   --namespace gitlab-agent --create-namespace \
   --set config.token=<agent-token> \
   --set config.kasAddress=wss://<gitlab-host>/-/kubernetes-agent/ \
-  --set config.kas.expose ={}.enabled=false \
-  --set config.metricsServer.enabled=true
+  --set image.tag=<agentk-version> \
+  --set serviceMonitor.enabled=true
 
 # 3. Or from OCI, no repo entry needed.
 helm upgrade --install <agent-name> \
@@ -461,6 +493,41 @@ helm upgrade --install <agent-name> \
 
 For self-signed certificates add `--set config.kasCaCert=<PEM>`. For a private registry that hosts the chart, see the chart's `image.registry` values.
 
+**Option 4 — the agent as an Argo CD `Application`.** This is the right shape when Argo CD is already the controller: one GitOps tool owns everything, including the agent. The token must *not* be in Git, so it comes from Vault through External Secrets (§12), and the `Application` only references the Secret by name.
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitlab-agent
+  namespace: argocd
+spec:
+  project: platform
+  source:
+    repoURL: https://charts.gitlab.io
+    chart: gitlab-agent
+    targetRevision: 2.32.0          # pin it; see [[argocd]] §5
+    helm:
+      valuesObject:
+        config:
+          # Secret created by an ExternalSecret in this namespace, key `token`
+          secretName: gitlab-agent-token
+          kasAddress: wss://<gitlab-host>/-/kubernetes-agent/
+        rbac:
+          useExistingRole: gitlab-agent
+        serviceMonitor:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gitlab-agent
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+```
+
+Order matters: the `ExternalSecret` that produces `gitlab-agent-token` must sync before the chart, or `agentk` crash-loops on a missing Secret. Use a sync wave ([[argocd]] §7) to put the secret ahead of the release.
+
 Verify chart values with `helm show values gitlab/gitlab-agent` before relying on a specific key — the chart evolves. Hardening values worth reviewing each time:
 
 | Value | Effect |
@@ -468,10 +535,23 @@ Verify chart values with `helm show values gitlab/gitlab-agent` before relying o
 | `serviceAccount.create=false` | Use a pre-created ServiceAccount |
 | `rbac.useExistingRole=<name>` | Use your own ClusterRole instead of the bundled broad one |
 | `rbac.create=false` | Bind nothing by default; you own RBAC |
-| `config.kas.expose.enabled=false` | Do not create a LoadBalancer for the agent's own traffic |
-| `config.metricsServer.enabled` | Expose agent metrics for monitoring |
+| `config.secretName=<name>` | Bring your own Secret for the token instead of passing `config.token` on the command line |
+| `config.kasCaCert=<PEM>` | Verify a self-signed KAS certificate |
+| `serviceMonitor.enabled=true` | Create a `ServiceMonitor` so Prometheus scrapes the agent |
+| `config.operational_container_scanning.enabled=false` | Skip the container-scanning RBAC if you do not use that feature (default `true`) |
+| `securityContext` / `podSecurityContext` | Empty by default; set them to satisfy a `restricted` PSA namespace (§11) |
+| `extraEnv[0].name=HTTPS_PROXY` | Reach KAS through an HTTP proxy |
 
-The agent's bundled ClusterRole is broad by default. On a shared or production cluster, review it against your own role rather than accepting it.
+The agent's bundled ClusterRole is `cluster-admin` by default — GitLab's own documentation says not to use that on production systems. On a shared or production cluster, create a least-privilege role and pass `rbac.useExistingRole`.
+
+**On upgrades, never use `--reuse-values`.** GitLab documents this explicitly: `--reuse-values` misses new chart defaults and silently retains deprecated ones. Capture the values instead and pass them back as a file:
+
+```sh
+helm get values <agent-name> -n gitlab-agent > agent-values.yaml
+helm upgrade <agent-name> gitlab/gitlab-agent -n gitlab-agent -f agent-values.yaml
+```
+
+**Version skew:** keep `agentk` within one minor of the GitLab instance version. GitLab supports the matching minor plus the previous and next one — so a 19.4 instance is happy with agent 19.3.x–19.5.x. If you omit `image.tag`, you get whatever the chart pins, which can lag the agent's own latest release.
 
 ### 5.3 The agent configuration file
 
@@ -586,6 +666,16 @@ The GitLab-provided cluster-applications image also ships helpers worth using ra
 | `gl-ensure-namespace` | create the namespace before deploying |
 
 Pin the image tag and upgrade it deliberately; it is a CI dependency like any other.
+
+**From a laptop, not CI,** the same agent connection gives you `kubectl` without a distributed kubeconfig and without an inbound firewall rule. This is how a human reaches the cluster:
+
+```sh
+glab cluster agent list                                   # find the numeric agent ID
+glab cluster agent update-kubeconfig --agent <id> --use-context
+kubectl get nodes
+```
+
+It writes an exec-credential plugin entry into your kubeconfig, so tokens are minted on demand and cached rather than stored as a long-lived credential. Useful flags: `--token-expiry-duration` (minimum 1 day), `--cache-mode` (defaults to `force-keyring`), and `--kubeconfig` to write somewhere other than the default file. See [[glab-cli]] for the rest of the `glab cluster agent` surface.
 
 ### 5.6 Pipeline shape: diff → sync → deploy
 
@@ -1054,19 +1144,22 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: standard
-provisioner: <your.csi.driver>
+provisioner: cinder.csi.openstack.org    # OpenStack; see §3 "OpenStack platform integration"
 parameters:
-  type: gp3
-  encrypted: "true"
+  availability: nova                     # Cinder AZ
+  type: <cinder-volume-type>             # must already exist in Cinder
 reclaimPolicy: Delete        # Retain for anything you would be sad to lose
 allowVolumeExpansion: true   # you will need this
 volumeBindingMode: WaitForFirstConsumer   # let the scheduler pick the zone
 ```
 
-Two defaults that save pain:
+**`parameters` are driver-specific and do not transfer.** This is the single most common copy-paste failure in storage config, because a wrong parameter is rejected at provisioning time, not at apply time — the `StorageClass` applies cleanly and then every PVC sits `Pending` with an error buried in the external-provisioner logs. Cinder accepts only `availability`, `type`, `appendVolumeMetadata` and `mkfs-options`. AWS EBS parameters such as `type: gp3` and `encrypted: "true"` are **not** valid for Cinder: `gp3` is not a Cinder volume type, and there is no `encrypted` parameter at all — encryption is a property of the Cinder volume type, configured in OpenStack by the operator, so you request it by naming an encrypted volume type.
+
+Three defaults that save pain:
 
 - **`volumeBindingMode: WaitForFirstConsumer`** — with the default `Immediate`, a PVC binds before the pod is scheduled, so a volume can land in an unavailable zone while the pod waits for one elsewhere.
 - **`allowVolumeExpansion: true`** — a PVC you cannot grow is a PVC you cannot keep.
+- **Check your AZ topology before trusting `availability`.** If the Cinder AZs do not match the Nova AZs, set `ignore-volume-az: true` in the driver's `[BlockStorage]` cloud config, or pods stay `Pending` with no useful event.
 
 ### 9.3 Choosing storage per workload
 
@@ -1287,7 +1380,7 @@ Enforce per namespace with labels. Start in audit, watch, then enforce — jumpi
 
 ```sh
 kubectl label --overwrite ns my-app pod-security.kubernetes.io/enforce=restricted \
-  --pod-security.kubernetes.io/enforce-version=v1.37
+  pod-security.kubernetes.io/enforce-version=v1.37
 kubectl label --overwrite ns my-app pod-security.kubernetes.io/audit=restricted \
   pod-security.kubernetes.io/warn=restricted
 ```
@@ -1416,12 +1509,15 @@ spec:
       path: "<kv-mount>"            # the KV v2 mount name
       version: "v2"
       auth:
-        jwt:
-          # Authenticate with the cluster's identity, not a static token
+        # Authenticate with the cluster's identity, not a static token
+        kubernetes:
+          mountPath: "kubernetes"       # where the auth method is mounted in Vault
+          role: "<vault-role>"          # required; bound server-side to the ServiceAccount
           serviceAccountRef:
             name: eso-vault-auth
-          audience: vault
-          jwtProvider: <issuer>
+            namespace: external-secrets  # mandatory on a ClusterSecretStore
+            audiences:
+              - vault                    # required from Vault 1.21; see below
 ---
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
@@ -1452,6 +1548,8 @@ spec:
 Three things that matter more than the rest:
 
 - **Use workload identity for the store, not a static token.** A static Vault token in a `SecretStore` is one rotation away from being a stale credential and a security review finding. Vault's Kubernetes auth method, or JWT/OIDC auth, means the secret store's own credentials rotate automatically.
+- **Set `audiences` — this is a scheduled outage otherwise.** ESO's Vault provider documents it plainly: from **Vault 1.20** a role without an audience logs a warning during authentication, and in **Vault 1.21 and later authentication fails**. The audience is requested on the ESO side (`serviceAccountRef.audiences`) and must match what the Vault role expects. A cluster that works today breaks on the Vault upgrade, with a 403 that reads like a policy problem.
+- **Get the auth stanza shape right.** `auth.kubernetes` takes `mountPath`, a **required** `role`, and then *either* `serviceAccountRef` *or* `secretRef` — never both. If you use `auth.jwt` instead, the ServiceAccount goes under `kubernetesServiceAccountToken.serviceAccountRef`, not directly under `jwt`; there is no `audience` (singular) field and no `jwtProvider` field anywhere in the CRD. Guessing here produces a manifest the API server rejects.
 - **`refreshInterval` bounds staleness.** A value that changes in Vault will not reach the pod until the next refresh *and* until the pod restarts or reloads it. If the app supports hot reload, use it; otherwise expect a rollout.
 - **`creationPolicy: Owner`** ties the lifecycle together so deleting the `ExternalSecret` removes the `Secret`.
 
@@ -1580,7 +1678,7 @@ Each entry: what it is for, minimum viable configuration, and what to watch. Cro
 
 ### 15.1 Airflow
 
-Read [[airflow]] for Airflow itself and [[airflow-dag]] for DAG patterns in a repo that versions them next to their code.
+Read [[airflow]] for Airflow itself, and the repo-local `airflow-dag` skill (§15 preamble) for DAG patterns in a repo that versions them next to their code.
 
 The official Helm chart (`apache-airflow/airflow`) is the only sane way to run Airflow on Kubernetes. Current documented requirements: Kubernetes **1.30+**, Helm **3.19+**. All executors are supported, including `KubernetesExecutor`.
 
@@ -1659,7 +1757,7 @@ Scheduling and quota:
 
 Airflow to Spark: Airflow's `SparkKubernetesOperator` submits a `SparkApplication` and defers on its status, which keeps Airflow as the orchestrator and Spark as the compute. That is the standard shape for a data platform — Airflow owns scheduling and dependencies, the cluster owns execution. Read [[airflow]] for the operator, and see §15.1 for Airflow itself.
 
-**When Databricks is the better answer.** A self-managed Spark on Kubernetes is worth it when you need control over the runtime, the data cannot leave your infrastructure, or you are consolidating on one platform. Databricks remains the better answer when you want a managed runtime, Delta Lake features, and serverless autoscaling without operating Spark yourself. Our pipelines currently run on Databricks; read [[biocloud-databricks]] before proposing a move in either direction, and [[biocloud-kubernetes]] for the current cluster state.
+**When Databricks is the better answer.** A self-managed Spark on Kubernetes is worth it when you need control over the runtime, the data cannot leave your infrastructure, or you are consolidating on one platform. Databricks remains the better answer when you want a managed runtime, Delta Lake features, and serverless autoscaling without operating Spark yourself. Our pipelines currently run on Databricks; read [[biocloud-databricks]] before proposing a move in either direction, and the repo-local `biocloud-kubernetes` skill for the current cluster state.
 
 ### 15.3 Databases and stateful services
 
@@ -1898,7 +1996,7 @@ Verified against upstream release metadata. **Re-check before pinning** — thes
 | k3s | v1.37.1+k3s1 | Tracks Kubernetes minors |
 | Gateway API | v1.6.2 | Check the CRD versions your controller chart serves |
 | cert-manager | v1.21.2 | |
-| External Secrets Operator | v2.11.0 | Check served CRD `apiVersion` before writing manifests |
+| External Secrets Operator | v2.12.0 (chart 2.12.0) | Check served CRD `apiVersion` before writing manifests. Set `audiences` — required from Vault 1.21 (§12) |
 | Argo CD | **v3.5.4** | Fixes 4 CRITICAL advisories; do not run older 3.5.x. See [[argocd]] §16.1 |
 | Argo Workflows | v4.1.4 | |
 | Cilium | v1.20.2 | |

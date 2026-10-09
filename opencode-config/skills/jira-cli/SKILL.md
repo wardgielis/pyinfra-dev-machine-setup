@@ -167,7 +167,7 @@ jira issue view KEY-123
 
 # 3. Get the template ADF from an unfilled issue
 curl -s -u "user@example.com:$JIRA_API_TOKEN" \
-  "https://your-domain.atlassian.net/rest/api/3/issue/BIOCL-2160?fields=description" \
+  "https://your-domain.atlassian.net/rest/api/3/issue/KEY-123?fields=description" \
   | jq '.fields.description' > /tmp/adf.json
 
 # 4. Edit /tmp/adf.json to add content paragraphs inside each info panel

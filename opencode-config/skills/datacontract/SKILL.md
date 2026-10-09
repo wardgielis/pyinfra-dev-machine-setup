@@ -11,7 +11,7 @@ metadata:
 
 The **Open Data Contract Standard (ODCS) v3.1.0** is a YAML specification for machine-readable data contracts. The **datacontract CLI** validates, tests, exports, and imports those contracts.
 
-**Related skills**: [[biocloud-datacontract]] for Biocloud/Naturalis project conventions; [[new-table]] for scaffolding new tables with contracts.
+**Related skills**: [[databricks]] for extracting schemas from Unity Catalog. Two sibling skills are **repo-local to the data-platform repo** (`.opencode/skills/`), so they are named rather than linked: `biocloud-datacontract` for our project conventions, and `new-table` for scaffolding new tables with contracts.
 
 ## CLI Workflow
 
@@ -618,6 +618,6 @@ result.entries         # list[ChangelogEntry]: .path, .type ("added"|"removed"|"
 
 ## Related Skills
 
-- [[biocloud-datacontract]]: Biocloud/Naturalis project conventions, Databricks server templates, quarantine checks, shared Python utilities
-- [[new-table]]: Scaffolding new tables with run files, tests, and data contracts
+- `biocloud-datacontract` (repo-local, not linkable from here): our project conventions, Databricks server templates, quarantine checks, shared Python utilities
+- `new-table` (repo-local, not linkable from here): scaffolding new tables with run files, tests, and data contracts
 - [[spark]]: PySpark/Delta Lake patterns that read and validate these contracts

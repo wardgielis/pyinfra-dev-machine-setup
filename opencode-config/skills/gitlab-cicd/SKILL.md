@@ -546,13 +546,45 @@ When using the OpenTofu component, the `.gitlab-tofu:id_tokens` hidden job must 
 
 **Symptom**: A job runs on every commit even though it should be scoped.
 
-**Fix**: Check rule precedence — rules evaluate top-to-bottom, first match wins. A missing `when: never` catch-all at the bottom means the job runs by default:
+**Fix**: Check rule precedence — rules evaluate top-to-bottom, first match wins, and **if no rule matches the job is excluded** (not included). So an over-broad job is almost never a missing `when: never`; it is a rule that matches more than you think:
+
+```yaml
+# Wrong: `changes:` with no `if:` matches on every ref, including tags and
+# every feature branch, whenever one of those paths is touched.
+rules:
+  - changes: ["Dockerfile"]
+
+# Right: constrain the ref as well as the paths.
+rules:
+  - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    changes: ["Dockerfile"]
+```
+
+Two rule behaviours that actually cause this symptom:
+
+- **A bare `- when: always`**, or any rule with neither `if:` nor `changes:`, matches everything that reaches it. A trailing `- when: never` only *documents* the default; it does not change behaviour.
+- **`changes:` evaluates to `true` whenever there is no Git push event to diff against** — tag pipelines, scheduled pipelines and manual pipelines all qualify, and so does the first pipeline on a brand-new branch. The job then runs unconditionally. This is the usual cause of "my `changes:` job runs on everything".
+
+The documented fix is `compare_to`, which pins the comparison to a ref instead of relying on a push event:
 
 ```yaml
 rules:
-  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  # Missing: - when: never   ← without this, job runs everywhere else too
+  - changes:
+      paths: ["Dockerfile", "docker/**/*"]
+      compare_to: refs/heads/main
 ```
+
+Without `compare_to`, restrict the job to the pipeline types where the diff is well defined:
+
+```yaml
+rules:
+  - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    changes: ["Dockerfile"]
+```
+
+In merge request pipelines `changes:` compares against the target branch; in branch pipelines it compares against the previous commit on the branch. Note that even with `compare_to`, `changes:` still evaluates to `true` when the branch is newly created.
+
+This matches the precedence rule stated under `rules:` Anatomy — the two must agree: **no rule matches means the job is excluded.**
 
 Add `- when: never` as the last rule to make exclusion explicit.
 

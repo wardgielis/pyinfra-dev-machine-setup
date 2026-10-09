@@ -146,7 +146,7 @@ databricks tables delete --full-name <catalog>.<schema>.<table> --profile develo
 
 ## Table Schema Extraction (hand-off to datacontract CLI)
 
-Use these to extract a table schema locally. See [[biocloud-databricks]] for the biocloud workflow, and [[datacontract]] / [[biocloud-datacontract]] for the contract authoring steps.
+Use these to extract a table schema locally. See [[biocloud-databricks]] for our own workflow, and [[datacontract]] for the contract authoring steps (plus the repo-local `biocloud-datacontract` skill for our ODCS template).
 
 ### Option 1 — DDL via SQL (best for `datacontract import sql`)
 
@@ -350,4 +350,4 @@ Expected — this env var is only set inside Databricks. Code that checks for it
 - [[biocloud-databricks]]: Biocloud workspace URLs, profiles, catalog naming, cluster configs, group sync, bundle ops, data contract workflow
 - [[spark]]: PySpark/Delta Lake code patterns
 - [[datacontract]]: Full ODCS field reference and datacontract CLI commands
-- [[biocloud-datacontract]]: Biocloud-specific ODCS template and conventions
+- `biocloud-datacontract` (repo-local, not linkable from here): our ODCS template and conventions
