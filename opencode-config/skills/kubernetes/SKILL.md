@@ -366,6 +366,40 @@ If you are building Kubernetes on OpenStack VMs you own:
 - Back up etcd (`etcdctl snapshot save`) and store the snapshot somewhere outside the cluster. A cluster whose etcd backup lives inside the cluster is not backed up.
 - Keep the OpenStack security groups as your first network control layer, then Kubernetes `NetworkPolicy` for the second.
 
+### Network planning: the CIDRs you cannot change later
+
+**Decide the pod and Service CIDRs before the first `kubeadm init`, and check them against every network you need to reach.** Changing the Service CIDR afterwards is not a supported operation, and changing the pod CIDR means reconfiguring the CNI and restarting every node — in practice both are a rebuild. This is the cheapest mistake to avoid and one of the most expensive to discover.
+
+The defaults are the problem, because they are large and they live in private space you probably already use:
+
+| Setting | Default | Risk |
+|---|---|---|
+| `--service-cidr` | **`10.96.0.0/12`** | Covers `10.96.0.0`–`10.111.255.255`. Collides with any corporate or OpenStack subnet in that range |
+| `--pod-network-cidr` | **no default** — the CNI decides | Cilium's default cluster pool is **`10.0.0.0/8`**, which claims the *entire* 10/8 private range |
+| `--service-dns-domain` | `cluster.local` | Fine unless you federate clusters later |
+
+**Cilium's `10.0.0.0/8` default is the one to catch.** On any network that uses 10.x — most corporate networks, most OpenStack tenancies, most VPN ranges — it overlaps something. The symptom is not an obvious failure: the cluster comes up healthy and then *pods specifically* cannot reach some external service, while the same request works from the node. That is a routing collision, and by the time you diagnose it the cluster is built.
+
+Before `init`, write down and compare:
+
+- OpenStack tenant subnet(s) and the router's networks
+- Anything reachable over VPN, and the VPN's own ranges
+- The GitLab instance, Vault, the external database, object storage, any on-prem range
+- Other Kubernetes clusters you may peer with or migrate between
+
+Then pick deliberately — small, specific, documented ranges rather than the defaults:
+
+```sh
+kubeadm init \
+  --control-plane-endpoint "k8s-api.development.example.org:6443" \
+  --pod-network-cidr   "10.244.0.0/16" \
+  --service-cidr       "10.245.0.0/16"
+```
+
+Keep them in the IaC alongside the subnets ([[naturalis-opentofu]]) so the next cluster does not re-derive them, and so a reviewer can see a collision in a diff. Also set the CNI's pool to match — with Cilium that means `ipam.operator.clusterPoolIPv4PodCIDRList`, not just the kubeadm flag, or the two disagree.
+
+**MTU is the other one that bites on OpenStack.** Overlay encapsulation (VXLAN/GENEVE) subtracts header bytes from the underlying network's MTU, and OpenStack tenant networks are frequently already below 1500. Get it wrong and you see the classic signature: DNS and small HTTP requests work fine, then any large response or TLS handshake with a big certificate chain hangs. Check the tenant network's MTU in OpenStack and let the CNI auto-detect it rather than hardcoding 1500; if you must pin it, pin it to the detected path MTU minus the tunnel overhead, and test with a large transfer rather than `ping`.
+
 ### HA control plane: the decision you make at `init` time
 
 **Best practice is three stacked control-plane nodes behind a load balancer.** That is kubeadm's default HA topology and the right answer for a self-managed cluster of our size.
@@ -460,7 +494,7 @@ The layering in §2.3 says *what* depends on what. This is the concrete sequence
 |---|---|---|
 | 1 | Provision VMs, DNS names, security groups ([[naturalis-opentofu]]) | — |
 | 2 | Node preflight (table above), via the provisioning tool | `kubeadm init` fails late and cryptically otherwise |
-| 3 | `kubeadm init` / `k3s install` with `--cloud-provider=external` **and `--control-plane-endpoint`** | Both are effectively irreversible; retrofitting either means re-joining every node or re-issuing control-plane certs (§3) |
+| 3 | `kubeadm init` / `k3s install` with `--cloud-provider=external`, `--control-plane-endpoint`, **and deliberate pod/Service CIDRs** | All three are effectively irreversible. Retrofitting means re-joining every node, re-issuing control-plane certs, or rebuilding outright (§3) |
 | 4 | **CNI** (Cilium) | Nodes stay `NotReady` and **no pod schedules** until a CNI is running. CoreDNS sits `Pending` — that is expected, not a fault |
 | 5 | **OCCM** + `cloud-config` Secret | Clears the `uninitialized` taint. Until this runs, nodes look healthy and schedule nothing |
 | 6 | **Cinder CSI** + a `StorageClass` (§9.2) | Anything with a PVC is unschedulable |
@@ -2258,6 +2292,8 @@ Use a small fixed set of tiers, named identically across the whole stack — clo
 | Adding a cluster add-on by hand | Not in Git, gone after a rebuild |
 | Skipping minor versions during upgrade | Not supported; will break |
 | `kubeadm init` without `--control-plane-endpoint` | Converting to HA later means re-issuing certs and re-joining every node (§3) |
+| Accepting the default pod/Service CIDRs | Cilium claims all of `10.0.0.0/8`; a collision is a rebuild, and the symptom is pods-only unreachability (§3) |
+| Hardcoding MTU 1500 on an overlay network | Small requests work, large transfers hang — the hardest networking bug to attribute (§3) |
 | A two-node control plane | Breaks etcd quorum on any single failure — *less* available than one node (§3) |
 | Two Gateway controllers in one cluster | Two failure domains and two CRD sets for one job (§8.8) |
 | No etcd backup | One disk failure is total loss |
