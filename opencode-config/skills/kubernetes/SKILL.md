@@ -352,7 +352,7 @@ Validate **every** overlay in a matrix, not just `production`. A `development` o
 
 ### Decision factors
 
-- **How many nodes?** One or two: k3s, single control plane. Three or more with HA: three control-plane nodes, or a single control plane plus a load balancer and stacked etcd.
+- **How many nodes?** One or two: k3s, single control plane. Three or more with HA: three stacked control-plane nodes behind a load balancer. Either way, set `--control-plane-endpoint` at `init` — see "HA control plane" below for why that is the one decision you cannot defer.
 - **Who else needs access?** If a provider or a colleague will operate it later, prefer something standard (kubeadm, k3s) over something exotic.
 - **Is the control plane a pet or cattle?** A single control plane on a self-hosted cluster *is* a pet. Budget for its failure: without HA, a control-plane reboot is a cluster outage.
 - **Portability.** When you move to a provider-managed control plane, you lose `kubeadm`, node access, and possibly some CSI drivers. Design for that from the start (§20 migration readiness).
@@ -365,6 +365,36 @@ If you are building Kubernetes on OpenStack VMs you own:
 - Put the VMs in the same OpenStack network with a private fixed IP. Do not expose 6443 to the internet — see §5 for why an outbound-only agent connection removes the need.
 - Back up etcd (`etcdctl snapshot save`) and store the snapshot somewhere outside the cluster. A cluster whose etcd backup lives inside the cluster is not backed up.
 - Keep the OpenStack security groups as your first network control layer, then Kubernetes `NetworkPolicy` for the second.
+
+### HA control plane: the decision you make at `init` time
+
+**Best practice is three stacked control-plane nodes behind a load balancer.** That is kubeadm's default HA topology and the right answer for a self-managed cluster of our size.
+
+**The one irreversible decision: pass `--control-plane-endpoint` on the very first `kubeadm init`, even for a single control-plane cluster.** Kubernetes' own documentation recommends exactly this: *"If you have plans to upgrade this single control-plane kubeadm cluster to high availability you should specify the `--control-plane-endpoint` to set the shared endpoint for all control-plane nodes."* It takes a DNS name or a load-balancer address.
+
+Skip it and the API server's address is the first node's own IP, baked into every certificate SAN and every kubeconfig. Converting to HA afterwards means re-issuing the control-plane certificates and re-joining every node — in practice a rebuild. It costs nothing to set on day one, so set it even if HA is a "maybe later":
+
+```sh
+# Point it at the LB/DNS name from day one, even with one control-plane node
+kubeadm init --control-plane-endpoint "k8s-api.development.example.org:6443" --upload-certs
+```
+
+| Topology | Hosts | When |
+|---|---|---|
+| Single control plane | 1 | Development only. It *is* a pet (§"Decision factors"); a reboot is an outage |
+| **Stacked etcd, 3 control-plane nodes** | 3 | **The default.** etcd colocated with the control plane; kubeadm creates each etcd member automatically on `kubeadm join --control-plane` |
+| External etcd, 3 + 3 | 6 | Only when you need the failure domains decoupled. Kubernetes' docs: *"this topology requires twice the number of hosts"* |
+
+Rules that come from etcd, not from Kubernetes:
+
+- **Three, not two.** etcd needs a quorum, so an odd count: 3 tolerates one node loss, 5 tolerates two. A two-node control plane is *less* available than one node, because losing either breaks quorum.
+- **Stacked means coupled failure.** Losing one node loses both an etcd member and a control-plane instance, which is precisely why the minimum is three rather than two.
+- **etcd is latency- and fsync-sensitive.** Put the control-plane nodes on fast disks and a low-latency network. Spreading them across distant OpenStack AZs to "improve availability" can instead make etcd unstable — spread within a region, not across high-latency links.
+- **Back up etcd regardless of topology.** HA protects against node loss, not against a bad `kubectl delete` or a corrupted cluster (§9.4).
+
+On OpenStack the load balancer in front of `:6443` is **Octavia**, which is the same dependency as §"OpenStack platform integration" below — so if Octavia is unavailable in your tenancy, an HA control plane needs `keepalived` + `haproxy` on the control-plane nodes themselves, with the VIP in `allowed_address_pairs` exactly as MetalLB requires. Decide this before provisioning, because it changes the node count and the network plan.
+
+**Our honest recommendation**: on a development cluster, one control-plane node *with* `--control-plane-endpoint` set. For anything carrying real work, three. The upgrade from one to three is then adding nodes, not rebuilding — which is the whole point of setting the flag early.
 
 ### OpenStack platform integration
 
@@ -430,7 +460,7 @@ The layering in §2.3 says *what* depends on what. This is the concrete sequence
 |---|---|---|
 | 1 | Provision VMs, DNS names, security groups ([[naturalis-opentofu]]) | — |
 | 2 | Node preflight (table above), via the provisioning tool | `kubeadm init` fails late and cryptically otherwise |
-| 3 | `kubeadm init` / `k3s install` with `--cloud-provider=external` | Set it now; retrofitting means re-joining every node (§3) |
+| 3 | `kubeadm init` / `k3s install` with `--cloud-provider=external` **and `--control-plane-endpoint`** | Both are effectively irreversible; retrofitting either means re-joining every node or re-issuing control-plane certs (§3) |
 | 4 | **CNI** (Cilium) | Nodes stay `NotReady` and **no pod schedules** until a CNI is running. CoreDNS sits `Pending` — that is expected, not a fault |
 | 5 | **OCCM** + `cloud-config` Secret | Clears the `uninitialized` taint. Until this runs, nodes look healthy and schedule nothing |
 | 6 | **Cinder CSI** + a `StorageClass` (§9.2) | Anything with a PVC is unschedulable |
@@ -440,7 +470,7 @@ The layering in §2.3 says *what* depends on what. This is the concrete sequence
 | 10 | Argo CD manages itself; root `Application` per cluster ([[argocd]] §3.2–3.3) | Makes step 9 reproducible instead of a snowflake |
 | 11 | **ESO**, then `ClusterSecretStore`, then `ExternalSecret`s (waves `-5`/`-3`/`-1`) | Every later component's credentials come from here |
 | 12 | **cert-manager** + `ClusterIssuer` | TLS is a dependency of the gateway and of nearly everything public |
-| 13 | **Gateway controller** + `Gateway` + DNS (§8.6) | Routes are unreachable without an address *and* a DNS record |
+| 13 | **Gateway controller** (§8.8) + `Gateway` + DNS (§8.6) | Routes are unreachable without an address *and* a DNS record |
 | 14 | GitLab agent ([[argocd]] §10.5), Kyverno, monitoring, Trivy | Platform services; none block the ones above |
 | 15 | Applications, via ApplicationSet ([[argocd]] §6) | — |
 
@@ -1129,6 +1159,8 @@ spec:
 
 Verify the Gateway API CRD version your cluster has before writing manifests — check `helm show crds` for the controller chart and `kubectl explain gateway.networking.k8s.io` after install.
 
+**Which controller to run is a real decision — see §8.8.** The Gateway API is a spec, and implementations differ substantially in how much of it they actually implement.
+
 ### 8.3 TLS: cert-manager
 
 ```yaml
@@ -1241,7 +1273,42 @@ Cluster DNS is `kube-dns`/`CoreDNS` via the `kubernetes.default` Service; the se
 
 A service mesh (Linkerd, Istio) is justified by mTLS everywhere, traffic management across many services, and fine-grained L7 routing. It is not justified by "we might need it later" — it adds a control plane, a failure domain, and a learning curve to every request path.
 
----
+### 8.8 Choosing a Gateway controller
+
+"Supports Gateway API" is not a yes/no. The project publishes **conformance reports** per implementation, per release, and the gaps are specific and material. Read the actual report rather than a vendor claim: `kubernetes-sigs/gateway-api` → `conformance/reports/<gw-api-version>/<implementation>/`.
+
+Verified from the v1.6 reports (all against Gateway API **v1.6.1**):
+
+| Controller | Version tested | `GATEWAY-HTTP` core | Profiles covered | Unsupported extended (HTTP) |
+|---|---|---|---|---|
+| **Envoy Gateway** | v1.9.0 | success | HTTP, GRPC, TLS | **2** — the most complete |
+| **Cilium** | v1.20.0 | success | HTTP, GRPC, TLS, TCP, UDP, **+ mesh** | 6 |
+| **NGINX Gateway Fabric** | v2.7.0 | success | HTTP, GRPC, TLS, TCP, UDP | 8 — no timeouts or retries |
+| **Traefik** | v3.7.10 | **partial** | HTTP, GRPC, TLS | 19 |
+
+**The recommendation, in order:**
+
+1. **If you run Cilium for NetworkPolicy (§8.5), use Cilium's Gateway.** This is the strongest answer for us. It is fully conformant on every profile including mesh, and it is **one fewer control plane, one fewer data plane, one fewer upgrade cycle** — the gateway becomes a feature of the CNI you already operate rather than another component. For a small team that operational saving outweighs Envoy Gateway's slightly better feature coverage.
+2. **If you are not on Cilium, use Envoy Gateway.** It is the most complete Gateway API implementation by conformance, and Envoy is the data plane most of the ecosystem converged on.
+3. **Traefik is a legitimate choice, with one caveat you must check first.**
+
+### On Traefik specifically
+
+If Traefik is already the organisation's standard, that familiarity is worth real money — existing dashboards, existing runbooks, colleagues who can debug it. Do not discard it for a conformance table. But know exactly what you are accepting:
+
+Traefik v3.7.10 reports **`core: partial`** on `GATEWAY-HTTP`, and its unsupported extended features include **`HTTPRouteRequestTimeout`, `HTTPRouteBackendTimeout`, `HTTPRouteRetry` (all variants), `HTTPRouteCORS`, and `HTTPRouteRequestMirror` (all variants)**, plus `GatewayHTTPListenerIsolation` and `ListenerSet`.
+
+In plain terms: **through Gateway API, Traefik gives you host/path routing, TLS termination and traffic weighting, but not timeouts, retries, CORS or request mirroring.** Traefik does support all of those — through its own `Middleware` and `IngressRoute` CRDs. So the practical consequence is not "Traefik can't do it", it is:
+
+> The moment you need a retry or a timeout, you drop out of the portable Gateway API and into Traefik-specific CRDs — which re-couples your routing layer to one vendor and gives up the main reason to adopt Gateway API in the first place.
+
+So the decision rule is:
+
+- **Only host/path routing and TLS, and Traefik is the house standard** → use Traefik. Perfectly sound, and the team knowledge is a genuine advantage.
+- **You need timeouts, retries, mirroring or CORS declaratively** → Cilium or Envoy Gateway, or accept Traefik CRDs and document that you have done so.
+- **Mixed estate** → pick one per cluster. Two gateway controllers in one cluster is two failure domains and two sets of CRDs for one job.
+
+Confirm what the organisation actually runs, and at what version, before committing — and if it is Traefik v2.x, note that Gateway API support is a **v3** feature, so an upgrade is part of the work either way. See [[naturalis-kubernetes]] for our own estate. Record the decision and its reason in the platform repo; this is exactly the kind of choice that is expensive to revisit silently.
 
 ## 9. Storage
 
@@ -1932,7 +1999,7 @@ Default answer: **outside the cluster**. If you must run one in-cluster, use the
 
 | Component | Chart / source | Notes |
 |---|---|---|
-| Gateway | Envoy Gateway, nginx, or Cilium's | One per cluster; the thing everything else publishes through. If you already run Cilium (§8.5), its Gateway implementation means one fewer control plane |
+| Gateway | **Cilium's if you run Cilium, else Envoy Gateway** | One per cluster; the thing everything else publishes through. See §8.8 for the conformance comparison and the Traefik caveat |
 | cert-manager | `jetstack/cert-manager` | Install early; TLS is a dependency of nearly everything else |
 | metrics-server | `metrics-server` | **Prerequisite for HPA, VPA, and `kubectl top`** |
 | OpenStack CCM | `cloud-provider-openstack` | **Required on OpenStack** — LoadBalancer Services and the node taint (§3) |
@@ -2137,6 +2204,9 @@ Use a small fixed set of tiers, named identically across the whole stack — clo
 | `latest` on ingress/cert-manager/CNI | The cluster's own foundation is unpinned |
 | Adding a cluster add-on by hand | Not in Git, gone after a rebuild |
 | Skipping minor versions during upgrade | Not supported; will break |
+| `kubeadm init` without `--control-plane-endpoint` | Converting to HA later means re-issuing certs and re-joining every node (§3) |
+| A two-node control plane | Breaks etcd quorum on any single failure — *less* available than one node (§3) |
+| Two Gateway controllers in one cluster | Two failure domains and two CRD sets for one job (§8.8) |
 | No etcd backup | One disk failure is total loss |
 | Spark shuffle on an unbounded `emptyDir` | One large shuffle fills the node and evicts every pod on it (§15.2) |
 | No quota or queue on a shared batch pool | One job consumes the cluster; everything else starves (§10.7) |
@@ -2154,7 +2224,9 @@ Verified against upstream release metadata. **Re-check before pinning** — thes
 |---|---|---|
 | Kubernetes | **v1.37.1** | Support window: 1.37, 1.36, 1.35 |
 | k3s | v1.37.1+k3s1 | Tracks Kubernetes minors |
-| Gateway API | v1.6.2 | Check the CRD versions your controller chart serves |
+| Gateway API | v1.6.3 | Check the CRD versions your controller chart serves; conformance reports are per API version (§8.8) |
+| Envoy Gateway | v1.9.2 | Most complete Gateway API conformance (§8.8) |
+| Traefik | v3.7.14 | Gateway API needs **v3**; `GATEWAY-HTTP` core is `partial` — no timeouts/retries/CORS/mirroring via Gateway API (§8.8) |
 | cert-manager | v1.21.2 | |
 | External Secrets Operator | v2.12.0 (chart 2.12.0) | Check served CRD `apiVersion` before writing manifests. Set `audiences` — required from Vault 1.21 (§12) |
 | Argo CD | **v3.5.4** | Fixes 4 CRITICAL advisories; do not run older 3.5.x. See [[argocd]] §16.1 |
