@@ -819,23 +819,30 @@ argocd:diff:
   image: quay.io/argoproj/argocd:v3.5.4
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  parallel:
+    matrix:
+      - APP: [my-app, other-app]
+        TIER: [development]        # the overlay to diff against
   script:
     - argocd login "$ARGOCD_SERVER" --auth-token "$ARGOCD_AUTH_TOKEN" --grpc-web
     # --server-side-generate renders with the repo-server, so Helm/Kustomize
     # versions and plugins match production exactly.
     - |
-      argocd app diff "$APP" \
-        --local "apps/$APP/overlays/$CI_ENVIRONMENT_NAME" \
+      argocd app diff "$APP-$TIER" \
+        --local "apps/$APP/overlays/$TIER" \
         --local-repo-root "$CI_PROJECT_DIR" \
         --server-side-generate \
-        --diff-exit-code 20 > diff.txt || [ $? -eq 20 ]
-    - cat diff.txt
+        --diff-exit-code 20 | tee "diff-$APP-$TIER.txt" \
+        || [ "${PIPESTATUS[0]}" -eq 20 ]
   artifacts:
-    paths: [diff.txt]
+    paths: ["diff-*.txt"]
     expire_in: 1 week
 ```
 
 Details that matter:
+
+- **Do not reach for `$CI_ENVIRONMENT_NAME` here.** It is only set when the job declares `environment:name`, and a read-only diff job should not claim an environment. In an MR pipeline it would be empty, silently collapsing the path to `apps/$APP/overlays/`. Pass the tier explicitly, as above.
+- **`| tee` plus `${PIPESTATUS[0]}`**, not `> file`, if you want both the artifact and the log — and note that a plain `$?` after a pipe gives you `tee`'s status, not `argocd`'s, so the exit-code check silently always passes.
 
 - **Use `--server-side-generate`.** Without it the CLI renders locally, so your runner's Helm/Kustomize version decides the output and a local-only diff can disagree with what the repo-server will produce.
 - **Exit codes are load-bearing.** `argocd app diff` returns `1` when a diff exists, `2` on a general error, and `0` when clean — and `--exit-code` defaults to `true`. A naive `script:` therefore fails the job on every change. Set `--diff-exit-code 20` to separate "there is a diff" from "the command broke", then allow only that code.

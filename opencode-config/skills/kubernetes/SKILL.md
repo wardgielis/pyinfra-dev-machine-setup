@@ -422,6 +422,47 @@ A provider-managed OpenStack Kubernetes service normally installs and operates a
 
 The cgroup driver mismatch is the one that costs the most time, because the runtime reports itself as healthy. A minimal runtime config (Docker's default `containerd` config, for instance) omits `SystemdCgroup`; generate a full default config rather than patching a minimal one.
 
+### Bootstrap order: bare VMs to running applications
+
+The layering in §2.3 says *what* depends on what. This is the concrete sequence, because the order is where a first cluster actually goes wrong — each step below is blocked by the one before it, and several have no useful error message when done early.
+
+| # | Step | Blocked until the previous step works because |
+|---|---|---|
+| 1 | Provision VMs, DNS names, security groups ([[naturalis-opentofu]]) | — |
+| 2 | Node preflight (table above), via the provisioning tool | `kubeadm init` fails late and cryptically otherwise |
+| 3 | `kubeadm init` / `k3s install` with `--cloud-provider=external` | Set it now; retrofitting means re-joining every node (§3) |
+| 4 | **CNI** (Cilium) | Nodes stay `NotReady` and **no pod schedules** until a CNI is running. CoreDNS sits `Pending` — that is expected, not a fault |
+| 5 | **OCCM** + `cloud-config` Secret | Clears the `uninitialized` taint. Until this runs, nodes look healthy and schedule nothing |
+| 6 | **Cinder CSI** + a `StorageClass` (§9.2) | Anything with a PVC is unschedulable |
+| 7 | **metrics-server** | HPA, VPA and `kubectl top` are silently non-functional without it |
+| 8 | **Octavia or MetalLB** (§3) | A `Gateway` or `LoadBalancer` Service never gets an address |
+| 9 | **Argo CD**, by hand, once ([[argocd]] §3.1) | Everything after this arrives through Git |
+| 10 | Argo CD manages itself; root `Application` per cluster ([[argocd]] §3.2–3.3) | Makes step 9 reproducible instead of a snowflake |
+| 11 | **ESO**, then `ClusterSecretStore`, then `ExternalSecret`s (waves `-5`/`-3`/`-1`) | Every later component's credentials come from here |
+| 12 | **cert-manager** + `ClusterIssuer` | TLS is a dependency of the gateway and of nearly everything public |
+| 13 | **Gateway controller** + `Gateway` + DNS (§8.6) | Routes are unreachable without an address *and* a DNS record |
+| 14 | GitLab agent ([[argocd]] §10.5), Kyverno, monitoring, Trivy | Platform services; none block the ones above |
+| 15 | Applications, via ApplicationSet ([[argocd]] §6) | — |
+
+**The two circular dependencies, and how to break them:**
+
+1. **Argo CD needs a repo credential before it can sync the thing that creates repo credentials.** Create that one Secret by hand at step 9, then bring it under ESO management at step 11 and delete the hand-made copy. [[argocd]] §11.3.
+2. **ESO needs a working cluster to authenticate to Vault, and Vault holds the credentials the cluster needs.** Vault's Kubernetes auth role must be created *before* step 11, by whoever administers Vault, bound to the ServiceAccount name you are going to use. Agree that name up front — it is the one value you cannot discover from inside the cluster.
+
+**Verify each step before moving on.** The cost of discovering a step-5 mistake at step 13 is a rebuild:
+
+```sh
+kubectl get nodes                                   # 4-5: all Ready, no uninitialized taint
+kubectl describe node <n> | grep -i taint           # 5: must be empty
+kubectl get pods -A --field-selector=status.phase!=Running   # 4-7: should be empty
+kubectl top nodes                                   # 7: metrics-server alive
+kubectl get sc                                      # 6: a default StorageClass exists
+kubectl get svc -A -o wide | grep -i pending        # 8: no stuck LoadBalancers
+kubectl get application -n argocd                   # 10+: everything Synced/Healthy
+```
+
+Steps 1–8 are not GitOps — they are the substrate GitOps runs on, and they belong in the provisioning tool ([[pyinfra]] / [[naturalis-opentofu]]), not in the manifest repo. Step 9 onward is Git. Keeping that line sharp is what makes a rebuild a known quantity.
+
 ### Helm notes
 
 - **Helm 4 is current.** Charts must declare `apiVersion: v2`; verify a chart is Helm 4 compatible before adopting it. Helmfile supports Helm 3 and Helm 4.
@@ -693,7 +734,8 @@ k8s:diff:
   image: registry.gitlab.com/charts/cluster-applications
   script:
     - gl-use-kube-context
-    - kubectl diff -k "$MANIFESTS_PATH" || true
+    # kubectl diff exits 1 when a diff exists, so capture it and allow that code
+    - kubectl diff -k "$MANIFESTS_PATH" | tee diff.txt || [ "${PIPESTATUS[0]}" -le 1 ]
   artifacts:
     when: always
     paths: [diff.txt]
@@ -955,6 +997,63 @@ Use when you need stable network identities, ordered rollout, or per-replica sto
 
 `emptyDir` for scratch, `generic.ephemeral` for a pod-scoped PVC that is garbage-collected with the pod. Both are correct choices — knowing which is which prevents surprise data loss.
 
+### 7.6 PriorityClass: protect the platform from the workloads
+
+**Without priority classes, a cluster under memory pressure can evict Argo CD, the CNI agent or ESO to make room for a batch job.** The eviction is then self-inflicted and self-sustaining: the thing that would fix the cluster is the thing that got evicted. On a cluster that runs Spark or any bursty batch workload (§15.2) this is not hypothetical.
+
+Kubernetes ships two built-in classes — `system-cluster-critical` and `system-node-critical` — reserved for genuine cluster components. Add two of your own for the tiers in between:
+
+```yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: platform
+value: 100000
+globalDefault: false
+description: "Platform controllers: Argo CD, ESO, cert-manager, gateway, monitoring."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: application
+value: 1000
+globalDefault: true          # everything unlabelled lands here
+description: "Normal application workloads."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: batch-besteffort
+value: 100
+preemptionPolicy: Never       # queues instead of evicting someone else
+description: "Batch jobs. First to be evicted, never preempts."
+```
+
+Three rules that make this work rather than just exist:
+
+- **Set exactly one `globalDefault: true`.** Without a default, pods with no class get priority `0`, which is below `batch-besteffort` — the opposite of what you intended.
+- **`preemptionPolicy: Never` on batch** means a large Spark job waits for capacity instead of evicting a web workload to get it. Combined with Kueue (§10.7) this is how a shared pool stays predictable.
+- **Priority is not a resource guarantee.** It decides who gets evicted first under pressure; it does not create capacity. Requests still do the real work.
+
+### 7.7 Pulling from a private registry
+
+A GitLab project registry needs credentials, and the failure mode is `ImagePullBackOff` with `no basic auth credentials` — which reads like a bad tag.
+
+```yaml
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+        - name: registry-credentials
+```
+
+Two things to get right:
+
+- **`imagePullSecrets` is namespaced.** The Secret must exist in *every* namespace that pulls, which is exactly the repetitive work ESO is for — one `ExternalSecret` per namespace sourced from the same Vault path, or a Kyverno `generate` policy that clones it into new namespaces automatically (§11.3). Do not copy it by hand; it will be missing in the one namespace you forget.
+- **Use a deploy token or a project access token**, scoped to `read_registry` only, not a personal token. The same credential discipline as [[argocd]] §10.4.
+
+Alternatively, attach the Secret to the workload's ServiceAccount (`imagePullSecrets` on the ServiceAccount) so every pod using that account inherits it — less repetition in manifests, same namespacing constraint.
+
 ---
 
 ## 8. Networking
@@ -1116,7 +1215,27 @@ The last policy is the one people forget.
 
 Cilium also replaces kube-proxy (eBPF datapath) if you want it — a separate decision, worth evaluating separately.
 
-### 8.6 DNS and service mesh
+### 8.6 Publishing names: ExternalDNS
+
+**A `Gateway` with `hostnames: ["my-app.example.org"]` does not create that DNS record.** Nothing in §8.2 or §8.3 does. This is the gap that makes a correct-looking setup unreachable, and it also blocks cert-manager's `http01` solver and `dns01` validation — so it is a dependency of TLS, not a nicety.
+
+Two honest options:
+
+| Approach | Use when |
+|---|---|
+| **ExternalDNS** reconciles records from cluster objects | You have a DNS provider with an API and more than a couple of hostnames |
+| A static record per Gateway, managed in your IaC | One or two stable entry points; the gateway address rarely changes |
+
+The static route is perfectly respectable: with one `Gateway` per cluster, you create one wildcard record (`*.development.example.org`) pointing at the Octavia or MetalLB address in [[naturalis-opentofu]], and every `HTTPRoute` hostname underneath it resolves with no controller at all. Prefer this until the number of distinct entry points makes it annoying.
+
+If you do run ExternalDNS, two things to know:
+
+- **Point it at Gateway API routes, not just Ingress.** It supports `HTTPRoute`/`GRPCRoute`/`TLSRoute` as sources, which is what you need given §8.2 — the Ingress-only default source will silently publish nothing.
+- **OpenStack Designate is no longer an in-tree provider.** As of ExternalDNS v0.23.0 it is a **webhook provider** maintained outside the project (`inovex/external-dns-designate-webhook`), which means an extra sidecar and a different support expectation. Factor that in before assuming "ExternalDNS supports Designate" means first-class support.
+
+Always scope it with `--domain-filter` and a `--txt-owner-id`. Without an owner ID, two clusters sharing a zone will fight over records and delete each other's.
+
+### 8.7 DNS and service mesh
 
 Cluster DNS is `kube-dns`/`CoreDNS` via the `kubernetes.default` Service; the search path means in-cluster FQDNs are needed for cross-namespace names. Keep the default; do not build a mesh to solve a naming problem.
 
@@ -1389,7 +1508,44 @@ Target `restricted` for all application namespaces. Use `privileged` only for ge
 
 Note: recent releases tightened host-level probe and `/proc` access restrictions at `baseline` and above. An old privileged pod that used host HTTP probes can fail admission after an upgrade even though nothing in your manifests changed. When a version bump breaks admission unexpectedly, check the PSA level of the affected namespace before debugging the workload.
 
-### 11.2 Policy as code
+### 11.2 The per-namespace baseline
+
+Every application namespace should get the same four objects, applied as a Kustomize component (§2.5) so there is one definition rather than a copy per app. PSA labels are the admission control; these are the resource and network control.
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: baseline
+spec:
+  hard:
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.memory: 32Gi
+    persistentvolumeclaims: "10"
+    count/deployments.apps: "20"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: baseline
+spec:
+  limits:
+    - type: Container
+      default:                  # applied when a container sets no limit
+        memory: 512Mi
+      defaultRequest:           # applied when a container sets no request
+        cpu: 100m
+        memory: 128Mi
+      max:
+        memory: 8Gi
+```
+
+The behaviour that surprises people: **once a `ResourceQuota` sets any `requests.*` or `limits.*`, every pod in that namespace must specify the corresponding field, or admission rejects it.** A `LimitRange` with `defaultRequest` is what keeps that from breaking existing workloads — it fills in the missing values instead of failing them. Apply the `LimitRange` first, or at the same time.
+
+Pair both with the `default-deny` plus `allow-dns` NetworkPolicy from §8.4. And note from [[argocd]] §12.1 that the `applications` AppProject deliberately **blocks** apps from defining their own `ResourceQuota`, `LimitRange` and `NetworkPolicy` — otherwise this baseline is advisory rather than enforced.
+
+### 11.3 Policy as code
 
 | Tool | Model | Use for |
 |---|---|---|
@@ -1447,7 +1603,7 @@ spec:
 
 Run the same policies in CI against the rendered output (§2.8) so violations are caught at review time, not admission time.
 
-### 11.3 Supply chain
+### 11.4 Supply chain
 
 - **Scan images** (Trivy, Grype) in CI and continuously in-cluster (Trivy Operator) so newly published CVEs are surfaced without a redeploy.
 - **Sign and verify.** cosign signs images; a Kyverno `verifyImages` policy rejects unsigned ones at admission. Verification at admission is what turns a policy into a guarantee.
@@ -1455,7 +1611,7 @@ Run the same policies in CI against the rendered output (§2.8) so violations ar
 - **Minimal base images** (`distroless`, `chainguard`) shrink both the CVE surface and the attack surface.
 - Renovate or Dependabot keeps base images and charts current — treat that as part of the security model, not chore work.
 
-### 11.4 RBAC and runtime
+### 11.5 RBAC and runtime
 
 - Never bind `cluster-admin` to a workload or a CI job.
 - Never use the `default` ServiceAccount for a workload. Create a named one per workload; `automountServiceAccountToken: false` unless it calls the API.
@@ -1745,7 +1901,7 @@ The concerns that actually bite, in rough order of how often they cause incident
 - **Dynamic allocation is not optional for shared clusters.** Without it, every job reserves its maximum executors forever. Enable it so executors scale down when a stage finishes, and set `maxExecutors` so one job cannot consume the pool.
 - **Data stays in object storage and ClickHouse** (§1). A Spark job moves *processing* into the cluster; it reads Parquet from S3 and writes results back. Do not mount a PVC for the dataset, and do not treat executor-local disk as durable.
 - **Requests must be set on the driver and every executor.** Unsized Spark pods are the fastest way to make the scheduler guess wrong and leave the cluster unbalanced.
-- **Give the driver and executors a dedicated `ServiceAccount`** with only the RBAC they need to create and watch their own pods — not `cluster-admin` (see §11.4).
+- **Give the driver and executors a dedicated `ServiceAccount`** with only the RBAC they need to create and watch their own pods — not `cluster-admin` (see §11.5).
 - **Version compatibility matters.** Spark supports a bounded range of Kubernetes versions; check the Spark release notes against your cluster before pinning. A Spark too old for the cluster's API removals will fail at driver startup, not at submit.
 - **Build a job image with the dependencies baked in.** Fetching Python packages at runtime per executor is slow and non-reproducible. Pin the image digest and promote it like any other artifact.
 - **Executor `podTemplate`** is how you inject the things the operator does not expose: tolerations, node selectors for a job pool, sidecars, and the shuffle volume configuration above.
@@ -1776,9 +1932,13 @@ Default answer: **outside the cluster**. If you must run one in-cluster, use the
 
 | Component | Chart / source | Notes |
 |---|---|---|
-| Gateway | Envoy Gateway, nginx, or Cilium's | One per cluster; the thing everything else publishes through |
+| Gateway | Envoy Gateway, nginx, or Cilium's | One per cluster; the thing everything else publishes through. If you already run Cilium (§8.5), its Gateway implementation means one fewer control plane |
 | cert-manager | `jetstack/cert-manager` | Install early; TLS is a dependency of nearly everything else |
 | metrics-server | `metrics-server` | **Prerequisite for HPA, VPA, and `kubectl top`** |
+| OpenStack CCM | `cloud-provider-openstack` | **Required on OpenStack** — LoadBalancer Services and the node taint (§3) |
+| Cinder CSI | `cloud-provider-openstack` | **Required on OpenStack** for any PVC (§9.2) |
+| MetalLB | `metallb/metallb` | Only when Octavia is unavailable; needs `allowed_address_pairs` (§3) |
+| ExternalDNS | `external-dns/external-dns` | Only if you have many entry points; a static wildcard record is often better (§8.6) |
 | Cilium | `cilium/cilium` | Required for NetworkPolicy if the CNI is not policy-capable |
 | External Secrets | `external-secrets/external-secrets` | For Vault |
 | KEDA | `kedacore/keda` | For event-driven scaling |
@@ -2000,6 +2160,8 @@ Verified against upstream release metadata. **Re-check before pinning** — thes
 | Argo CD | **v3.5.4** | Fixes 4 CRITICAL advisories; do not run older 3.5.x. See [[argocd]] §16.1 |
 | Argo Workflows | v4.1.4 | |
 | Cilium | v1.20.2 | |
+| MetalLB | chart 0.16.1 | L2 mode needs OpenStack `allowed_address_pairs` (§3) |
+| ExternalDNS | v0.23.0 | OpenStack Designate is a **webhook** provider, not in-tree (§8.6) |
 | Flux | v2.9.6 | CRD apiVersions: `helm.toolkit.fluxcd.io/v2`, `source.toolkit.fluxcd.io/v1`, `kustomize.toolkit.fluxcd.io/v1` |
 | KEDA | v2.21.0 | |
 | Kueue | v0.20.0 | API `kueue.x-k8s.io/v1beta2`; requires Kubernetes 1.29+ |
