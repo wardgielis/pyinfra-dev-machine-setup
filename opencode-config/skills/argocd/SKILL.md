@@ -292,6 +292,12 @@ Argo CD's own best-practices doc gives five reasons, and all five are real: you 
 
 For us the access-separation reason is decisive — it is what lets developers ship code without holding write access to production config.
 
+### Promotion: paths, not branches
+
+Model environments as **directories on one branch** (`clusters/development`, `clusters/production`), each cluster's root `Application` tracking its own path — **not** a permanent branch per environment. A `development`/`production` branch pair drifts, makes promotion a merge-conflict exercise, and fights Helm and Kustomize, which separate environments by file. Keep `main` as the single source of truth; the production cluster simply has **no `automated` sync policy**, so a manual sync is the approval gate (§5). Promotion becomes a one-line change to the next environment's overlay, reviewed as a merge request — not a branch merge. See [[kubernetes]] §2.6 for the trade-offs.
+
+Pre-merge testing is separate from promotion: review a change with the `argocd app diff` gate (§10.6), run it in isolation with a preview environment (§10.7), and let the stable development deployment move on merge.
+
 ### Pin every remote reference
 
 Argo CD's docs are explicit: with templating tools a manifest **"can change its meaning from one day to the next"** because of an upstream change. Never `targetRevision: HEAD` on a chart. Never a Kustomize remote base without `?ref=`. Pin a chart version, a Git tag, or a commit SHA, and let Renovate propose the bumps.
@@ -854,9 +860,37 @@ Put this job in a `diff` stage ahead of merge, and pair it with manifest validat
 
 ### 10.7 Merge request preview environments
 
-A per-MR environment is the one case where generating Applications from GitLab's API beats the directory generator, because the unit of work is a *merge request*, not a directory.
+A per-MR environment is the one case where generating Applications from the SCM API beats the directory generator, because the unit of work is a *merge request*, not a directory.
 
-**The PR generator does not support GitLab.** Argo CD's pull request generator supports GitHub, Gitea and Bitbucket Server; GitLab is not in that list. So on GitLab you have two realistic options:
+**The PR generator supports GitLab.** Argo CD's pull request generator supports GitHub, **GitLab**, Gitea, Bitbucket Server/Cloud and Azure DevOps. On GitLab, template one Application per merge request with the `gitlab:` block:
+
+```yaml
+generators:
+  - pullRequest:
+      gitlab:
+        project: "43536894"          # numeric project ID, not the path
+        api: https://gitlab.com/     # self-managed: your instance URL
+        tokenRef: {secretName: gitlab-token, key: token}  # a read_api PAT
+        labels: [preview]            # opt-in: only MRs carrying this label
+        pullRequestState: opened
+        # insecure: true  /  caRef:  for a self-signed instance
+      requeueAfterSeconds: 60
+template:
+  metadata:
+    name: 'myapp-{{.branch_slug}}-{{.number}}'
+  spec:
+    source:
+      repoURL: https://gitlab.com/group/repo.git
+      targetRevision: '{{.head_sha}}'
+      path: apps/myapp/overlays/preview
+    destination:
+      server: https://kubernetes.default.svc
+      namespace: 'preview-mr-{{.number}}'
+```
+
+Parameters include `number`, `branch`, `branch_slug`, `head_sha`, `author`, `labels`, `target_branch`. The Application is created when an MR matches the filter (label/state) and **removed when it no longer does** — so close/merge cleans it up. Without the ApplicationSet webhook (which needs inbound from GitLab and is often blocked) the generator polls every `requeueAfterSeconds`.
+
+If the generator does not fit, two alternatives remain:
 
 1. **Let CI write a directory.** The MR pipeline commits `previews/mr-$CI_MERGE_REQUEST_IID/` to a long-lived branch, and an ordinary git directory generator (§6.1) turns it into an Application. The MR's own `on_stop` job removes the directory, and the generator prunes the Application. This stays within tooling you already run.
 2. **Let CI create the `Application` directly** with `argocd app create`, scoped to a dedicated `AppProject` with a namespace allow-list. Simpler to write, but it puts live state outside Git — acceptable for ephemeral previews, not for anything durable.
