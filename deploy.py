@@ -109,7 +109,10 @@ GUI_CASKS = [
 ]
 
 CODING_FORMULAE = [
-    "anomalyco/tap/opencode",  # Installing opencode via tap gives the quickest updates
+    # NOTE: conflicts with the v1 `opencode` formula (both ship an `opencode`
+    # binary). Uninstall `opencode` manually once before the first run:
+    #   brew uninstall opencode && brew install anomalyco/tap/opencode-v2
+    "anomalyco/tap/opencode-v2",  # OpenCode v2 CLI
 ]
 
 WORK_FORMULAE = [

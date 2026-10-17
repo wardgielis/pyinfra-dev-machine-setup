@@ -50,7 +50,7 @@ brew install eza bat fd zoxide
 
 # Install from a tap (tap first, then install)
 brew tap anomalyco/tap
-brew install anomalyco/tap/opencode
+brew install anomalyco/tap/opencode-v2
 
 # Install a specific version
 brew install node@20
