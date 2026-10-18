@@ -1,17 +1,45 @@
 import { Plugin } from "@opencode/plugin/tui"
-import { readdir, readFile } from "fs/promises"
+import { appendFile, readdir, readFile } from "fs/promises"
 import { join } from "path"
 import { homedir } from "os"
 
 export default Plugin.define({
   id: "skill-freshness",
   setup(context) {
-    const stop = context.data.on("session.created", () => {
-      void checkSkillFreshness(context)
-    })
-    return () => stop()
+    // The TUI connects to its server *before* plugins load, so a
+    // `server.connected` listener registered here never fires. Announce from
+    // `setup` instead, deferred just enough for the first render to commit.
+    // `session.created` stays as a fallback; both share one guard, so the
+    // warning is shown at most once per TUI run — including when an existing
+    // session is resumed instead of a new one being created.
+    let announced = false
+    const announce = (trigger: string) => {
+      if (announced) return
+      announced = true
+      void checkSkillFreshness(context, trigger)
+    }
+    const timer = setTimeout(() => announce("startup"), STARTUP_DELAY_MS)
+    const stopCreated = context.data.on("session.created", () => announce("session.created"))
+    return () => {
+      clearTimeout(timer)
+      stopCreated()
+    }
   },
 })
+
+// Give the TUI a moment to commit its first frame before pushing a toast.
+const STARTUP_DELAY_MS = 1500
+
+// Diagnostics land next to opencode's own logs so it is possible to tell
+// whether the check ran and whether the toast was handed to the UI.
+async function log(line: string): Promise<void> {
+  try {
+    const path = join(homedir(), ".local", "share", "opencode", "log", "skill-freshness.log")
+    await appendFile(path, `${new Date().toISOString()} ${line}\n`)
+  } catch {
+    // logging must never break the plugin
+  }
+}
 
 type ToastContext = {
   ui: {
@@ -92,7 +120,7 @@ async function getSkillPaths(): Promise<string[]> {
   return paths
 }
 
-async function checkSkillFreshness(context: ToastContext) {
+async function checkSkillFreshness(context: ToastContext, trigger: string) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -122,7 +150,10 @@ async function checkSkillFreshness(context: ToastContext) {
     }
   }
 
-  if (stale.length === 0) return
+  if (stale.length === 0) {
+    await log(`trigger=${trigger} stale=0`)
+    return
+  }
 
   const message =
     stale.length === 1
@@ -131,7 +162,9 @@ async function checkSkillFreshness(context: ToastContext) {
 
   try {
     context.ui.toast.show({ message, variant: "warning", duration: 600_000 })
-  } catch {
+    await log(`trigger=${trigger} stale=${stale.length} toast=shown`)
+  } catch (error) {
+    await log(`trigger=${trigger} stale=${stale.length} toast=failed ${String(error)}`)
     console.warn(`[skill-freshness] ${message}`)
   }
 }
