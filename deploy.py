@@ -393,7 +393,7 @@ files.put(
     dest=os.path.expanduser("~/.config/opencode/AGENTS.md"),
 )
 
-files.put(
+_opencode_package = files.put(
     name="Sync OpenCode package.json",
     src=str(pathlib.Path(__file__).parent / "opencode-config" / "package.json"),
     dest=os.path.expanduser("~/.config/opencode/package.json"),
@@ -402,9 +402,10 @@ files.put(
 server.shell(
     name="Install OpenCode plugins",
     commands=["cd ~/.config/opencode && npm install --silent"],
-    _if=lambda: not os.path.exists(
-        os.path.expanduser("~/.config/opencode/node_modules")
-    ),
+    # Re-run when package.json changed (dependency bump) as well as on a fresh
+    # machine; otherwise a dependency change would never be installed.
+    _if=lambda: _opencode_package.did_change()
+    or not os.path.exists(os.path.expanduser("~/.config/opencode/node_modules")),
 )
 
 files.directory(
@@ -413,10 +414,19 @@ files.directory(
     present=True,
 )
 
-files.put(
+# Pre-V2 plugin layout was a single file; V2 uses a directory per plugin with a
+# server (`index.ts`) and optional TUI (`tui.ts`) entrypoint.
+files.file(
+    name="Remove legacy single-file skill-freshness plugin",
+    path=os.path.expanduser("~/.config/opencode/plugins/skill-freshness.ts"),
+    present=False,
+)
+
+files.sync(
     name="Sync skill-freshness plugin",
-    src=str(pathlib.Path(__file__).parent / "opencode-config" / "plugins" / "skill-freshness.ts"),
-    dest=os.path.expanduser("~/.config/opencode/plugins/skill-freshness.ts"),
+    src=str(pathlib.Path(__file__).parent / "opencode-config" / "plugins" / "skill-freshness"),
+    dest=os.path.expanduser("~/.config/opencode/plugins/skill-freshness"),
+    delete=True,
 )
 
 

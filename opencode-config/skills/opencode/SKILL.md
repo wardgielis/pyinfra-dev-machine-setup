@@ -1,8 +1,8 @@
 ---
 name: opencode
-description: Use when editing or managing opencode in this repo — configuration (files/opencode_config.jsonc), plugins (opencode-config/plugins/), AGENTS.md (files/opencode_agents.md), or skills (opencode-config/skills/). Covers the repo-to-live file map, the repo-first editing rule, deploy.py Section 8 sync, and the skill authoring workflow (frontmatter, naming, lifecycle). For generic opencode config/plugin reference, read [[customize-opencode]] first.
+description: Use when editing or managing opencode in this repo — configuration (files/opencode_config.jsonc), plugins (opencode-config/plugins/), AGENTS.md (files/opencode_agents.md), or skills (opencode-config/skills/). Covers the repo-to-live file map, the repo-first editing rule, deploy.py Section 8 sync, and the skill authoring workflow (frontmatter, naming, lifecycle). For generic opencode configuration (schema, agents, permissions, MCP, plugin API) use the upstream docs.
 metadata:
-  review_after: "2026-10-09"
+  review_after: "2026-11-18"
   docs_url: "https://opencode.ai/docs/skills/"
 ---
 
@@ -12,7 +12,7 @@ This skill is the operating manual for managing **opencode itself in this repo**
 
 **Goal**: a fresh machine gets exactly the same opencode setup. The repo is the single source of truth; `~/.config/opencode` is a deploy artifact.
 
-**Related skills**: [[customize-opencode]] for generic opencode configuration reference (schema, agents, permissions, MCP, plugins API).
+**Upstream reference**: [opencode docs](https://opencode.ai/docs/) cover generic configuration — schema, agents, permissions, MCP, and the plugin API. This repo has no local generic-config skill; the repo-specific operating manual is this file.
 
 ---
 
@@ -25,15 +25,19 @@ This skill is the operating manual for managing **opencode itself in this repo**
 | Asset | Edit here (repo) | Live path (deploy artifact) | Sync mechanism |
 |---|---|---|---|
 | Config | `files/opencode_config.jsonc` | `~/.config/opencode/opencode.jsonc` | `_deploy_template()` (uses `string.Template`, `$$` escapes `$`; requires `OPENCODE_SKILLS_PATH` env) |
-| Plugins | `opencode-config/plugins/*.ts` | `~/.config/opencode/plugins/` | `files.put` + `npm install` |
+| Plugins | `opencode-config/plugins/<id>/` | `~/.config/opencode/plugins/<id>/` | `files.sync` + `npm install` |
 | Plugin deps | `opencode-config/package.json` | `~/.config/opencode/package.json` | `files.put` + `npm install` |
 | AGENTS.md | `files/opencode_agents.md` | `~/.config/opencode/AGENTS.md` | `files.put` |
-| Skills | `opencode-config/skills/<name>/SKILL.md` | loaded via `skills.paths` (no copy) | none — read live from repo |
+| Skills | `opencode-config/skills/<name>/SKILL.md` | loaded via the config `skills` array (no copy) | none — read live from repo |
 
 Key details:
 
-- **Config**: the template renders `$$schema` → `$schema`, and `skills.paths` is substituted from `OPENCODE_SKILLS_PATH`. It already includes the claude-code plugin and provider settings — preserve them when editing. `opencode.jsonc` in the repo is powered by these templates, not a standalone file; keep it that way.
-- **Plugins**: repo-versioned, deploy-synced, and the freshness plugin (`skill-freshness.ts`) reads `skills.paths` from the rendered config at runtime. When adding a plugin, put the source in `opencode-config/plugins/`, add any npm dependency to `opencode-config/package.json`, then run deploy so `npm install` picks it up.
+- **Config**: the template renders `$$schema` → `$schema`, and the V2 `skills` array is substituted from `OPENCODE_SKILLS_PATH`. It already includes the claude-code plugin and provider settings — preserve them when editing. `opencode.jsonc` in the repo is powered by these templates, not a standalone file; keep it that way. The config is **native V2** (`plugins`, `providers.*.settings`, `policies`, `skills` array) — do not reintroduce V1 keys (`plugin`, `provider.*.options`, `disabled_providers`, `skills.paths`).
+- **Plugins**: repo-versioned, deploy-synced. Each plugin is a directory (`opencode-config/plugins/<id>/`) with a server entrypoint (`index.ts`) and, when it needs the terminal UI, a TUI entrypoint (`tui.ts`) importing `@opencode/plugin/tui`. The freshness plugin (`skill-freshness/`) shows a stale-skill toast from `tui.ts` on `session.created` (verified end-to-end in the terminal TUI; the toast only fires once a session is actually created, not on the home screen). When adding a plugin, put the source under `opencode-config/plugins/<id>/`, add any npm dependency to `opencode-config/package.json`, then run deploy so `npm install` picks it up.
+
+  Entrypoints are resolved by `@opencode/plugin`'s `host.resolve`: `index.ts` is the **server** entrypoint (loads for every client), `tui.ts` the **terminal UI** entrypoint. Only the terminal CLI/TUI reconciles TUI plugins — the desktop app does not, so a toast emitted from `tui.ts` is invisible there. V2 has **no server-side** toast or log API (V1's `client.tui.showToast` / `client.app.log` are gone), so any user-facing notice must live in `tui.ts`.
+
+  **JSONC parsing gotcha**: plugins that read `opencode.jsonc` must strip comments string-aware. A naive `raw.replace(/\/\/.*$/gm, "")` corrupts `"$schema": "https://…"`, `JSON.parse` then throws, and a `try/catch` fallback silently degrades the plugin to a no-op. `skill-freshness/tui.ts` carries `parseJsonc()` for this.
 - **AGENTS.md**: always edit `files/opencode_agents.md` (this is the deployed file's source).
 
 ## Skills lifecycle
@@ -69,3 +73,5 @@ Key details:
 ## Reloading
 
 Skills are injected into `<available_skills>` at session start. After adding/updating a skill you must restart opencode (or start a new session) before an agent can see it. Loading is on-demand via the `skill` tool; an agent reads the full SKILL.md by its `<location>` path only when relevant.
+
+Plugin *code* is hot-reloaded by the file watcher, but provider/provider-settings are read when the server starts. **Quitting chat sessions does not restart the app** — the background service (`pgrep -f 'opencode-cli serve'`) and the desktop app keep running. To force a clean re-read, fully quit and relaunch OpenCode, or run `opencode service restart` / `opencode reload`.

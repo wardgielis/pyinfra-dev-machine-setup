@@ -1,18 +1,18 @@
 {
   "$$schema": "https://opencode.ai/config.json",
-  "plugin": [
+  "plugins": [
     "@khalilgharbaoui/opencode-claude-code-plugin"
   ],
-  "disabled_providers": ["gitlab"],
-  "provider": {
+  "policies": [
+    { "action": "provider.use", "resource": "gitlab", "effect": "deny" }
+  ],
+  "providers": {
     "claude-code": {
-      "options": {
+      "settings": {
         "proxyTools": ["Bash", "Edit", "Write", "WebFetch"],
         "bridgeOpencodeMcp": true
       }
     }
   },
-  "skills": {
-    "paths": ["${OPENCODE_SKILLS_PATH}"]
-  }
+  "skills": ["${OPENCODE_SKILLS_PATH}"]
 }
