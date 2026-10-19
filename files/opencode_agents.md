@@ -36,6 +36,16 @@ Do this proactively at session start — not reactively when asked.
 - **Cross-reference all suggestions** against loaded skill patterns
 - **Skill documentation > training knowledge**, always
 
+### Default skills
+
+Some skills cover a whole class of work rather than one named tool. Load them as defaults:
+
+- **[[python]]** — Python code, tests, or project config (`pyproject.toml`, `uv.lock`, pytest), including a one-line fix or a review comment.
+- **[[polars]]** — single-machine tabular data (CSV, Parquet, NDJSON, DataFrames), including questions phrased as "which/top/how many".
+- **[[spark]]** — PySpark, Delta Lake, or Databricks work; use it instead of [[polars]] for distributed data.
+
+The topic-specific skill still wins; these only set the baseline.
+
 ### Edge Cases
 
 - If no skills are relevant to the context: proceed with training knowledge, but mention this to the user
