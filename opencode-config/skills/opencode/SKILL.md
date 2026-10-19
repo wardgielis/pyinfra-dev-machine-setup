@@ -1,8 +1,8 @@
 ---
 name: opencode
-description: Use when editing or managing opencode in this repo — configuration (files/opencode_config.jsonc), plugins (opencode-config/plugins/), AGENTS.md (files/opencode_agents.md), or skills (opencode-config/skills/). Covers the repo-to-live file map, the repo-first editing rule, deploy.py Section 8 sync, and the skill authoring workflow (frontmatter, naming, lifecycle). For generic opencode configuration (schema, agents, permissions, MCP, plugin API) use the upstream docs.
+description: Use when editing or managing opencode in this repo — configuration (files/opencode_config.jsonc), plugins (opencode-config/plugins/), AGENTS.md (files/opencode_agents.md), or skills (opencode-config/skills/). Covers the repo-to-live file map, the repo-first editing rule, deploy.py Section 8 sync, and the skill authoring workflow (frontmatter, naming, lifecycle, size, vendoring, validation). For generic opencode configuration (schema, agents, permissions, MCP, plugin API) use the upstream docs.
 metadata:
-  review_after: "2026-11-18"
+  review_after: "2026-11-19"
   docs_url: "https://opencode.ai/docs/skills/"
 ---
 
@@ -57,20 +57,33 @@ Key details:
    - `name` — required, validated (see above)
    - `description` — required, 1-1024 chars; specific enough for the agent to choose correctly, starting with "Use when ..."
    - `license`, `compatibility`, `metadata` — optional
-   - Custom repo metadata keys: `review_after` (ISO date, consumed by the skill-freshness plugin to flag out-of-date skills) and `docs_url` (reference link). Set `review_after` ~1 month out when authoring/updating.
-4. **Body structure**: start with `# <name>`, then a goal, then short sections. Cross-link related skills with `**Related skills**: [[other-skill]]`. Use existing skills (e.g. [[pyinfra]], [[homebrew]]) as the style reference.
+   - Custom repo metadata keys: `review_after` (ISO date, consumed by the skill-freshness plugin to flag out-of-date skills), `docs_url` (reference link), and `version_pinned` (the tool/runtime version the skill targets, e.g. `3.12+` or `polars >= 2.0`). Set `review_after` ~1 month out when authoring/updating.
+4. **Body structure**: start with `# <name>`, then a goal, then short sections. Cross-link related skills with a `**Related skills**:` line and route to alternatives (e.g. [[spark]] vs [[polars]]). Use existing skills (e.g. [[pyinfra]], [[homebrew]]) as the style reference.
+5. **Size**: keep the skill in one `SKILL.md` up to ~500 lines. Past that, move depth into `references/<topic>.md`, link it from the skill body, and open every reference file with a `## Contents` line so it can be skimmed.
 
 ### Lifecycle: generic vs org-specific
 
 - **Generic skills** (public, safe for anyone): commit them — the repo is public and mirrors to GitHub.
 - **Org-specific skills** (internal infrastructure, workspace URLs, org names, credentials): add the directory path to the repo's `.gitignore`, then remind the user to copy it to their SSD backup. Deleting the repo copy loses it permanently since it's untracked.
 
+### Vendored skills
+
+When a skill is copied from an upstream project (e.g. the official Polars skill):
+
+- Keep the upstream `LICENSE` next to `SKILL.md`.
+- Add `VENDORED.md` with the source repository, tag, commit, copy date, the files copied, and every local change.
+- Patch upstream examples for the pinned version and record each patch in `VENDORED.md`.
+- Keep the upstream text where it is still correct; put local additions in clearly marked sections.
+
 ### Validation checklist
 
 - `SKILL.md` spelled in all caps
-- frontmatter present with `name` + `description`
-- skill name unique across ALL locations (docs: "Ensure skill names are unique across all locations")
-- keep every file under `opencode-config/skills/`, never under `~/.config/opencode/skills`
+- frontmatter present with `name` + `description`; `name` exactly matches the directory and is unique across ALL locations
+- `description` starts with "Use when", is at most 1024 chars, and names the class of work so it triggers even when the user does not name the tool
+- every file under `opencode-config/skills/`, never under `~/.config/opencode/skills`
+- code fences balanced; every `[[name]]` cross-link points to an existing skill directory
+- examples executed against the installed versions, including each example patched in a vendored skill
+- three realistic sample prompts run through the skill and the output checked against it
 
 ## Reloading
 
