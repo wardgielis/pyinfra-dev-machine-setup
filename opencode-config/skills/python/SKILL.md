@@ -140,6 +140,38 @@ More rules:
 - Do not compare booleans to `True` or `False`.
 - Do not use mutable default arguments. Use `None` and create the value inside.
 
+## Comprehensions and conditional expressions
+
+Prefer a comprehension when the body is a single expression and the result is the point:
+
+```python
+# Prefer
+active_names = [user.name for user in users if user.active]
+totals = {region: sum(order.amount for order in orders) for region, orders in grouped.items()}
+
+# Over
+active_names = []
+for user in users:
+    if user.active:
+        active_names.append(user.name)
+```
+
+- Use a list, set, or dict comprehension for one expression with at most one `if` filter.
+- Use a plain loop when the body has side effects, more than one statement, exception handling, or nested logic.
+- Never call a function for its side effects inside a comprehension. `[save(item) for item in items]` hides the loop; write the loop.
+- Do not nest comprehensions. Extract a helper function instead.
+- Prefer a comprehension to `map`/`filter` with a lambda, and use a generator expression inside `any`, `all`, `sum`, `min`, `max`, and `join`.
+
+A conditional expression chooses a value. It does not control which action runs:
+
+```python
+label = "paid" if order.is_paid else "unpaid"
+```
+
+- Keep the condition simple. If a branch needs an explanation, use an `if` block.
+- Do not use a conditional expression for side effects (`send() if ready else None`).
+- Do not put a compound statement on one line (`if ready: send()`). Put the body on its own line.
+
 ## Type hints
 
 Annotate public function arguments and return values. Annotate private helpers when the types are not obvious.
@@ -343,6 +375,8 @@ Add `pip-audit` if dependency security scanning is wanted. Keep the lockfile in 
 - [ ] Public functions have compact Google docstrings.
 - [ ] No docstring contains backticks.
 - [ ] Function names are verbs; predicates read as questions.
+- [ ] Simple accumulator loops are comprehensions; complex ones are still loops.
+- [ ] Conditional expressions choose a value, not an action.
 - [ ] Every regex has a one-line comment that says what it matches.
 - [ ] Existing comments are preserved, and stale ones are updated.
 - [ ] No old-implementation comments and no commented-out code.
