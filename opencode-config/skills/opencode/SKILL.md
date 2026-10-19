@@ -81,7 +81,7 @@ When a skill is copied from an upstream project (e.g. the official Polars skill)
 - frontmatter present with `name` + `description`; `name` exactly matches the directory and is unique across ALL locations
 - `description` starts with "Use when", is at most 1024 chars, and names the class of work so it triggers even when the user does not name the tool
 - every file under `opencode-config/skills/`, never under `~/.config/opencode/skills`
-- code fences balanced; every `[[name]]` cross-link points to an existing skill directory
+- code fences balanced; every cross-link to another skill points to an existing skill directory
 - examples executed against the installed versions, including each example patched in a vendored skill
 - three realistic sample prompts run through the skill and the output checked against it
 
