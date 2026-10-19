@@ -1,6 +1,6 @@
 ---
 name: databricks
-description: Generic Databricks CLI, SDK, and operational reference. Use when installing/authenticating the CLI, managing clusters/warehouses/jobs, querying Unity Catalog, handling secrets, setting up Databricks Connect locally, or extracting table schemas for data contract generation. Does NOT contain project-specific workspace URLs or configs — see [[biocloud-databricks]] for that.
+description: Use when working with Databricks — installing/authenticating the CLI, managing clusters/warehouses/jobs, querying Unity Catalog, handling secrets, setting up Databricks Connect locally, or extracting table schemas for data contract generation. Generic CLI, SDK, and operational reference. Does NOT contain project-specific workspace URLs or configs — see [[biocloud-databricks]] for that.
 metadata:
   review_after: "2027-07-22"
   docs_url: "https://docs.databricks.com/en/index.html"

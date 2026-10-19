@@ -1,6 +1,6 @@
 ---
 name: airflow
-description: Generic Apache Airflow 3.x reference. Use when configuring Airflow (env vars, config sections), managing Variables and Connections, setting up OAuth/SSO (Azure AD, Keycloak), understanding 2.x→3.x migration changes, authoring DAGs, or checking best practices. Does NOT contain our org-specific DAG patterns — those live in the repo-local `airflow-dag` skill.
+description: Use when working with Apache Airflow 3.x — configuring Airflow (env vars, config sections), managing Variables and Connections, setting up OAuth/SSO (Azure AD, Keycloak), understanding 2.x→3.x migration changes, authoring DAGs, or checking best practices. Generic reference; does not contain our org-specific DAG patterns — those live in the repo-local `airflow-dag` skill.
 metadata:
   review_after: "2026-08-13"
   docs_url: "https://airflow.apache.org/docs/apache-airflow/stable/"

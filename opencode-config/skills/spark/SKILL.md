@@ -1,6 +1,6 @@
 ---
 name: spark
-description: Generic PySpark/Delta Lake/Databricks patterns. Use when writing Spark transformations, Delta Lake operations, or Databricks workflows. Does NOT contain project-specific paths or configs.
+description: Use when writing Spark transformations, Delta Lake operations, or Databricks workflows. Generic PySpark/Delta Lake/Databricks patterns. Does NOT contain project-specific paths or configs.
 metadata:
   review_after: "2026-08-09"
   docs_url: "https://spark.apache.org/docs/latest/"
