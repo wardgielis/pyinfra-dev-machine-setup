@@ -13,7 +13,7 @@ Write Python that a teammate can read, test, and change without guessing.
 
 This skill is the default for Python work. It follows PEP 8 and PEP 257, with the house choices used in biocloud-core: 120-character lines, double quotes, Google docstrings, ruff, uv, and pytest. Where a repository already has a clear style, that style wins. Read the project's pyproject.toml and the surrounding code before changing anything.
 
-**Related skills**: [[spark]] for PySpark and Delta Lake, [[polars]] for Polars, [[datacontract]] for data contracts.
+**Related skills**: [[spark]] for PySpark and Delta Lake, [[polars]] for Polars, [[jupyter-notebook]] for notebooks, [[datacontract]] for data contracts.
 
 ## Which dataframe tool
 
