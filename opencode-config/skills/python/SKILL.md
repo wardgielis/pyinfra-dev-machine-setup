@@ -126,6 +126,7 @@ More rules:
 - Four spaces per indent. No tabs.
 - 120 characters per line in this house. PEP 8 uses 79 and allows teams to agree on up to 99, so 120 is a deliberate local choice. The repository's ruff setting is the final word.
 - Double quotes. Ruff format handles this.
+- Plain ASCII in code, commands, paths, and snippets. Do not use typographic characters that need a modifier key: the single-character ellipsis, curly quotes, arrows, en and em dashes, or non-breaking spaces. Write `...`, `"`, `->`, and `-` instead. These characters cannot be typed on every keyboard and they break copy-paste. Prose may keep normal punctuation.
 - Two blank lines between top-level definitions, one between methods.
 - Group imports: standard library, third-party, local. One blank line between groups.
 - Use absolute imports. Avoid wildcard imports.
