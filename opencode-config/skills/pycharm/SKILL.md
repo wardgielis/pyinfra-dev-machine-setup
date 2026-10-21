@@ -37,7 +37,8 @@ Three properties shape everything below:
    installation serves *every* project open in that instance (the enable flag lives in
    `options/mcpServer.xml` at application level, not in a project's `.idea/`). But each call
    must name its target project via `projectPath`, and the IDE can only act on projects that
-   are actually open in it.
+   are actually open in it. Verified with two projects open at once: the same endpoint
+   answered for both, and each call returned that project's own branch and status.
 2. **Only the streamable-HTTP endpoint works.** PyCharm serves `/stream` (streamable HTTP)
    and `/sse` (legacy SSE). opencode's `type: "remote"` speaks streamable HTTP; the legacy
    `/sse` is GET-only, so pointing at it fails with `HTTP 405`.
@@ -123,6 +124,10 @@ by the list. A path *inside* an open project (`…/opencode-config`) resolves to
 project's root, so a subdirectory is safe. An unrelated path is not — and every answer about
 it would be worthless, so check this before acting on results. The IDE log shows the same
 condition as `no IDE MCP servers: source project <path> is not open`.
+
+Note that after a restart the IDE reopens only its **last** project, so a session in any
+other repo hits the second error until that project is opened — a very common way for this
+to look like a broken connection.
 
 ### Diagnose in order; the symptom does not name the cause
 
@@ -331,7 +336,7 @@ terminal commands, and can reach databases.
 | Connection refused, or works then stops after an IDE restart | Port moved with the restart, or the IDE is closed | Re-read the endpoint (settings panel or `scripts/find-endpoint.sh`), update `PYCHARM_MCP_URL`, redeploy |
 | `mcp list` says `connected` but this session's calls fail | Dead transport from a connection made before the restart, or project scoping | Start a new session, then pass `projectPath`; `opencode service restart` if it persists |
 | `Unable to determine the target project` | No `projectPath` | Pass the project root on every call |
-| `doesn't correspond to any open project` + project list | That project is not open in the IDE | Open it in PyCharm, or stop asking the IDE about it |
+| `doesn't correspond to any open project` + project list | That project is not open in the IDE (after a restart only the last project reopens) | Open it in PyCharm, or stop asking the IDE about it |
 | Everything red, imports unresolved, `pytest` passes | Wrong interpreter or content root (a fresh but wrong model) | Fix the interpreter/content root; compare `git rev-parse --show-toplevel` with the open project and `.venv/pyvenv.cfg` with `get_python_environment` |
 | Stale or phantom results right after edits | Index behind disk | `lint_files` / `get_file_problems` to force the refresh, then re-query |
 | A file reports no problems but obviously has them | `get_file_problems` known to miss (IJPL-219680) | Re-check with `lint_files` |

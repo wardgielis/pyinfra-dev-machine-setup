@@ -374,7 +374,9 @@ os.environ.setdefault(
 # project open in that IDE instance; a tool call picks the target project by projectPath.
 # Use the streamable-HTTP endpoint /stream, not the legacy /sse endpoint: /sse is GET-only
 # and opencode's `remote` transport POSTs to it, which fails with HTTP 405.
-# The port is per IDE install; override PYCHARM_MCP_URL in .env if it changes.
+# The port is chosen per IDE *launch*, so this default can go stale when PyCharm
+# restarts: re-read it (Settings > Tools > MCP Server, or the pycharm skill's
+# scripts/find-endpoint.sh) and override PYCHARM_MCP_URL in .env if it changed.
 os.environ.setdefault("PYCHARM_MCP_URL", "http://127.0.0.1:64462/stream")
 
 files.directory(

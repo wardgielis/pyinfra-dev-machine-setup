@@ -60,7 +60,7 @@ Every tool accepts an optional `projectPath`. Pass it on every call: the MCP ser
 | Tool | Parameters | Notes |
 |---|---|---|
 | `read_file` | `file_path`:string, `offset`?:integer, `limit`?:integer, `projectPath`?:string | Takes `file_path` (snake case) with `offset`/`limit`. Output is line-prefixed (`L1: …`), which makes naive string matching awkward — prefer the plain file read for exact content. Other builds expose richer modes (slice/lines/line_columns/offsets/indentation) and can read sources inside jars. |
-| `list_directory_tree` | `directoryPath`:string, `maxDepth`?:integer, `timeout`?:integer, `projectPath`?:string | Provides a tree representation of the specified directory in the pseudo graphic format like `tree` utility does. |
+| `list_directory_tree` | `directoryPath`:string, `maxDepth`?:integer, `timeout`?:integer, `projectPath`?:string | Tree representation like `tree`. **`maxDepth: 1` returns only the root** — use 2 for immediate children, 3 to recurse one level deeper. |
 | `get_all_open_file_paths` | `projectPath`?:string | Returns active editor's and other open editors' file paths relative to the project root. |
 | `open_file_in_editor` | `filePath`:string, `projectPath`?:string | Opens the specified file in the JetBrains IDE editor. |
 
