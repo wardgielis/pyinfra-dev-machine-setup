@@ -394,7 +394,9 @@ def main(argv: list[str] | None = None) -> int:
         allow_running=args.allow_running,
     )
     print(result.summary())
-    return 1 if args.check and (result.changed or result.blocked) else 0
+    if result.blocked:
+        return 2
+    return 1 if args.check and result.changed else 0
 
 
 if __name__ == "__main__":

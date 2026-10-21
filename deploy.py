@@ -660,7 +660,7 @@ server.shell(
 # account sync does not cover (it only syncs application-level categories). The
 # username comes from JIRA_LOGIN; the API token stays in the macOS Keychain.
 # Quit PyCharm before running the deploy: the IDE rewrites workspace.xml on exit,
-# so the helper skips (with a warning) instead of losing the change.
+# so the deploy stops here instead of losing the change.
 def _configure_pycharm_jira_tasks() -> None:
     """Write the shared Jira Tasks server into every PyCharm project."""
     import sys
@@ -675,6 +675,8 @@ def _configure_pycharm_jira_tasks() -> None:
         roots=os.environ.get("PYCHARM_PROJECT_ROOTS", "~/dev").replace(",", ":").split(":"),
     )
     print(f"PyCharm Jira Tasks:\n{result.summary()}")
+    if result.blocked:
+        raise SystemExit(result.blocked)
 
 
 python.call(
