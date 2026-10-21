@@ -77,6 +77,28 @@ OpenCode assets are managed in the repo, not in `~/.config/opencode`:
 Edit the repo file, then sync via `deploy.py` Section 8. Never hand-edit `~/.config/opencode`.
 Full workflow: load the **[[opencode]]** skill.
 
+## PyCharm MCP
+
+OpenCode is wired to PyCharm's built-in MCP server, exposed as `tools.pycharm.*` (52
+tools: inspections and lint, refactoring, run configurations, Jupyter kernels, database
+connections). Prefer it over shell tooling when IDE-accurate answers matter.
+
+- **Instance-wide, not per project.** PyCharm enables the server for the whole IDE
+  installation (`options/mcpServer.xml`), so one endpoint serves every project open in
+  that PyCharm instance; the opencode side is a single global entry in
+  `~/.config/opencode/opencode.jsonc`, so every session in every directory gets it.
+- **Always pass `projectPath`** (an absolute path, typically the session's working
+  directory). Without it a call fails with "Unable to determine the target project".
+  The server can only act on projects that are actually open in PyCharm.
+- **Use the `/stream` endpoint, never `/sse`.** `/sse` is the legacy GET-only transport
+  and opencode's `remote` type POSTs to it, failing with HTTP 405. The working URL is
+  `http://127.0.0.1:64462/stream` (streamable HTTP).
+- **Port is per IDE install.** If PyCharm serves MCP elsewhere, set `PYCHARM_MCP_URL` in
+  `.env`; the default lives in `deploy.py` Section 8.
+- **Verify with `opencode mcp list`** (expect `✓ pycharm connected`). MCP servers are
+  read when the opencode server starts; a config change is usually picked up live, but if
+  `mcp list` still reports a failure, restart OpenCode (`opencode service restart`).
+
 ## Keeping AGENTS.md up to date
 
 When you complete a task, phase, or to-do item that is listed in AGENTS.md, update the file

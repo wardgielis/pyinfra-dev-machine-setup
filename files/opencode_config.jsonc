@@ -14,5 +14,10 @@
       }
     }
   },
+  "mcp": {
+    "servers": {
+      "pycharm": { "type": "remote", "url": "${PYCHARM_MCP_URL}" }
+    }
+  },
   "skills": ["${OPENCODE_SKILLS_PATH}"]
 }

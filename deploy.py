@@ -369,6 +369,13 @@ os.environ.setdefault(
     "OPENCODE_SKILLS_PATH",
     os.path.join(_deploy_dir, "opencode-config", "skills"),
 )
+# PyCharm's built-in MCP server (Settings > Tools > MCP Server). It is enabled per IDE
+# *installation* (options/mcpServer.xml, application-level), so one entry serves every
+# project open in that IDE instance; a tool call picks the target project by projectPath.
+# Use the streamable-HTTP endpoint /stream, not the legacy /sse endpoint: /sse is GET-only
+# and opencode's `remote` transport POSTs to it, which fails with HTTP 405.
+# The port is per IDE install; override PYCHARM_MCP_URL in .env if it changes.
+os.environ.setdefault("PYCHARM_MCP_URL", "http://127.0.0.1:64462/stream")
 
 files.directory(
     name="Ensure ~/.config/opencode exists",
@@ -385,7 +392,7 @@ files.directory(
 _deploy_template(
     "~/.config/opencode/opencode.jsonc",
     "opencode_config.jsonc",
-    ["OPENCODE_SKILLS_PATH"],
+    ["OPENCODE_SKILLS_PATH", "PYCHARM_MCP_URL"],
 )
 
 files.put(
