@@ -651,35 +651,3 @@ server.shell(
         "duti ~/.duti",
     ],
 )
-
-
-# ============================================================
-# SECTION 11: PYCHARM JIRA TASKS SERVER
-# ============================================================
-# IntelliJ stores task servers per project in .idea/workspace.xml, which JetBrains
-# account sync does not cover (it only syncs application-level categories). The
-# username comes from JIRA_LOGIN; the API token stays in the macOS Keychain.
-# Quit PyCharm before running the deploy: the IDE rewrites workspace.xml on exit,
-# so the deploy stops here instead of losing the change.
-def _configure_pycharm_jira_tasks() -> None:
-    """Write the shared Jira Tasks server into every PyCharm project."""
-    import sys
-
-    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-    from scripts.pycharm_jira_tasks import sync_tasks_server
-
-    result = sync_tasks_server(
-        server=os.environ["JIRA_SERVER"],
-        login=os.environ["JIRA_LOGIN"],
-        project_key=os.environ["JIRA_PROJECT_KEY"],
-        roots=os.environ.get("PYCHARM_PROJECT_ROOTS", "~/dev").replace(",", ":").split(":"),
-    )
-    print(f"PyCharm Jira Tasks:\n{result.summary()}")
-    if result.blocked:
-        raise SystemExit(result.blocked)
-
-
-python.call(
-    name="Configure PyCharm Jira Tasks server",
-    function=_configure_pycharm_jira_tasks,
-)

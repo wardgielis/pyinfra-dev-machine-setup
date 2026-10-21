@@ -59,28 +59,8 @@ uv run pyinfra @local deploy.py
 - **Modern CLI replacements** — eza, bat, zoxide, ripgrep, fd, fastfetch, dust, btop, procs, lazygit, git-delta, gitleaks, git-filter-repo, gh, glab, mise, direnv, atuin, starship, antidote, viu, lsix, yazi, tealdeer, television, trash-cli, dysk, yq, lazydocker, k9s, kubectx, kubectl, helm, micro
 - **Shell configuration** — daily brew auto-update on first terminal open, Starship prompt, Ghostty config, ZSH plugins (autosuggestions, syntax highlighting, completions via Antidote), aliases mapping classic commands to modern replacements
 - **Config deployment** — renders Jira, Databricks, and AWS config files from `.env` templates and deploys them to their expected locations (`~/.config/.jira/.config.yml`, `~/.databrickscfg`, `~/.aws/config`); writes `JIRA_API_TOKEN` to `~/.secrets` for shell sourcing
-- **PyCharm Jira Tasks** — writes the shared Jira server into every PyCharm project and into the default-project template (see below)
 - **Drift cleanup** — generates a Brewfile from the managed package lists, shows a preview of unmanaged packages, and removes them after your confirmation
 - **Housekeeping** — silences macOS "Last Login" message
-
-### PyCharm Jira Tasks
-
-PyCharm's Tasks plugin stores its Jira server per project in `.idea/workspace.xml`,
-which JetBrains account sync does not cover. The deploy writes the same server into
-every project below `PYCHARM_PROJECT_ROOTS` (colon-separated, default `~/dev`) and
-into `options/project.default.xml`, so projects created later get it too.
-
-Quit PyCharm first: the IDE rewrites `workspace.xml` on exit, so the helper skips
-(with a warning) while PyCharm is running. To apply it without a full deploy:
-
-```sh
-uv run python scripts/pycharm_jira_tasks.py --dry-run   # show what would change
-uv run python scripts/pycharm_jira_tasks.py             # write, with a timestamped backup
-```
-
-The username comes from `JIRA_LOGIN` in `.env`; the API token is never written to
-disk by this repo. PyCharm keeps it in the macOS Keychain, keyed by the Jira URL,
-and asks for it the first time the server is used on a new machine.
 
 ## Customizing
 
