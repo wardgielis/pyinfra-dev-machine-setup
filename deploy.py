@@ -91,6 +91,7 @@ GUI_CASKS = [
     "mattermost",
     "whatsapp",
     "signal",
+    "discord",
 
     # Music
     "reaper",
