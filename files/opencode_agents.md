@@ -93,11 +93,15 @@ connections). Prefer it over shell tooling when IDE-accurate answers matter.
 - **Use the `/stream` endpoint, never `/sse`.** `/sse` is the legacy GET-only transport
   and opencode's `remote` type POSTs to it, failing with HTTP 405. The working URL is
   `http://127.0.0.1:64462/stream` (streamable HTTP).
-- **Port is per IDE install.** If PyCharm serves MCP elsewhere, set `PYCHARM_MCP_URL` in
-  `.env`; the default lives in `deploy.py` Section 8.
+- **The port is chosen per IDE launch**, so it can change when PyCharm restarts. Re-read it
+  from Settings → Tools → MCP Server (or `scripts/find-endpoint.sh` in the [[pycharm]]
+  skill), then set `PYCHARM_MCP_URL` in `.env`; the default lives in `deploy.py` Section 8.
 - **Verify with `opencode mcp list`** (expect `✓ pycharm connected`). MCP servers are
   read when the opencode server starts; a config change is usually picked up live, but if
   `mcp list` still reports a failure, restart OpenCode (`opencode service restart`).
+
+Full tool map, pre-flight checks, index-lag discipline and troubleshooting: load the
+**[[pycharm]]** skill.
 
 ## Keeping AGENTS.md up to date
 
