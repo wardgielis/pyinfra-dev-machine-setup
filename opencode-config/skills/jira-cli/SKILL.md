@@ -2,8 +2,9 @@
 name: jira-cli
 description: Use when interacting with Jira via the CLI (ankitpokhrel/jira-cli). Covers issue search, creation, transitions, comments, sprints, epics, and boards.
 metadata:
-  review_after: "2026-08-09"
+  review_after: "2027-04-25"
   docs_url: "https://github.com/ankitpokhrel/jira-cli"
+  version_pinned: "v1.7.0"
 ---
 
 # Jira CLI
@@ -11,6 +12,8 @@ metadata:
 Binary: `jira` from [ankitpokhrel/jira-cli](https://github.com/ankitpokhrel/jira-cli).
 
 Install: `brew install jira-cli`
+
+**MCP server available**: `mcp.servers.atlassian` in `files/opencode_config.jsonc` connects to Atlassian's official remote MCP server (`https://mcp.atlassian.com/v2/mcp` — Jira, Confluence, Compass, Bitbucket), authenticated via an interactive OAuth 2.1 browser flow on first use, no `.env` entry needed. Cloud-only (not Server/Data Center) — matches this org's `*.atlassian.net` setup. Prefer it for live issue/board state; fall back to the CLI below for anything it doesn't cover.
 
 ## Where the project, board and server come from
 

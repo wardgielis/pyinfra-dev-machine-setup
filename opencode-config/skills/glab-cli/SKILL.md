@@ -10,6 +10,12 @@ metadata:
 
 Authentication is managed via `GITLAB_TOKEN` env var or `glab auth login`.
 
+**MCP server available**: two entries in `files/opencode_config.jsonc`, both GitLab's official built-in MCP server (GA since GitLab 19.5), authenticated via an interactive OAuth browser flow on first use — no `.env` entry needed, and an admin must have allowed MCP for the instance/group:
+- `mcp.servers.gitlab` → `https://gitlab.com/api/v4/mcp` (works anywhere; matches the `glab` login on this machine)
+- `mcp.servers.gitlab-naturalis` → `https://gitlab.naturalis.io/api/v4/mcp` (the org's self-managed instance — only resolves on the corporate network/VPN)
+
+Prefer them for live MR/issue/pipeline state; fall back to `glab` below for anything they don't cover.
+
 ## Auto-detection
 
 Before using `glab` commands, check which platform the repo is on:

@@ -2,9 +2,9 @@
 name: airflow
 description: Use when working with Apache Airflow 3.x — configuring Airflow (env vars, config sections), managing Variables and Connections, setting up OAuth/SSO (Azure AD, Keycloak), understanding 2.x→3.x migration changes, authoring DAGs, or checking best practices. Generic reference; does not contain our org-specific DAG patterns — those live in the repo-local `airflow-dag` skill.
 metadata:
-  review_after: "2026-08-13"
+  review_after: "2027-01-25"
   docs_url: "https://airflow.apache.org/docs/apache-airflow/stable/"
-  version_pinned: "apache-airflow==3.x (docs reflect 3.3.0)"
+  version_pinned: "apache-airflow==3.x (docs reflect 3.3.2)"
 ---
 
 # Apache Airflow 3.x Reference
@@ -21,6 +21,10 @@ Generic reference for Airflow 3.x. For our own DAG patterns, deployment, and clu
 Full release notes: https://airflow.apache.org/docs/apache-airflow/stable/release_notes.html
 
 Use this table for quick orientation. For specific "was X available in 3.2.1?" questions, fetch the live page above.
+
+### Airflow 3.3.2 (2026-09-17) / 3.3.1 (2026-08)
+
+Patch releases on the 3.3.0 branch, no new features. **3.3.1 fixed a high-severity authorization bug in the Backfill API** that affected every version below it — if running anything on the 3.3.x branch below 3.3.1, upgrade. 3.3.1 also fixed pandas 3 XCom handling, custom DAG bundles, task retries, and config masking; 3.3.2 is stability-only on top of that.
 
 ### Airflow 3.3.0 (2026-07-06)
 

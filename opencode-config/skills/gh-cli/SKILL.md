@@ -2,8 +2,9 @@
 name: gh-cli
 description: Use when the repository remote points to github.com. First check `git remote -v` to confirm the remote is on github.com before using. Covers PR creation/review, issue tracking, CI checks, and repository operations via gh commands.
 metadata:
-  review_after: "2026-08-09"
+  review_after: "2026-12-26"
   docs_url: "https://cli.github.com/manual/"
+  version_pinned: "v2.103.x"
 ---
 
 # gh CLI
@@ -32,6 +33,9 @@ gh auth token                               # print current auth token
 
 # Fallback: authenticate via token
 echo "$GITHUB_TOKEN" | gh auth login --with-token
+
+# Short-lived, auto-refreshing OAuth token (public preview, v2.103.0+)
+gh auth login -h github.com --expiring
 ```
 
 ## Pull Requests
@@ -128,6 +132,42 @@ gh config list                        # show full config
 gh config set git_protocol https      # use HTTPS (useful when SSH unavailable)
 gh config set git_protocol ssh        # revert to SSH
 ```
+
+## Discussions, Issue Types & Attachments
+
+```bash
+gh discussion list                    # list repo discussions
+gh discussion view 12                 # view a discussion
+gh discussion create -t "Title" -b "Body"
+
+gh issue create -t "Title" -b "Body" --type bug          # issue types (bug/feature/task, if configured)
+gh issue edit 99 --add-sub-issue 101                      # link a sub-issue
+gh issue edit 99 --add-dependency 102                     # mark a dependency
+
+# Attach a file/image to an issue, PR, or comment (v2.103.0+)
+gh issue comment 99 -b "See screenshot" --attach ./screenshot.png
+```
+
+## Projects (v2)
+
+```bash
+gh project list --owner "@me"
+gh project item-list 1 --owner "@me"
+gh project item-list 1 --owner "@me" --field "Status" --field "Priority"  # named field columns (v2.97.0+)
+gh project item-add 1 --owner "@me" --url https://github.com/owner/repo/issues/99
+```
+
+## Copilot CLI
+
+`gh copilot` installs and launches the (separate, agentic) GitHub Copilot CLI, forwarding any args it doesn't itself handle:
+
+```bash
+gh copilot                            # installs Copilot CLI on first run, then launches it
+gh pr create --reviewer copilot       # request a Copilot code review
+gh pr edit 42 --add-reviewer copilot
+```
+
+Copilot CLI itself (models, `/model`, sandboxing, MCP) is a separate, fast-moving tool — check `gh copilot --help` or the GitHub Changelog rather than this skill for its current capabilities.
 
 ## API (generic endpoint access)
 

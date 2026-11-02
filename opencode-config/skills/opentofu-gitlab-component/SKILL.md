@@ -2,9 +2,9 @@
 name: opentofu-gitlab-component
 description: Use when configuring or troubleshooting the GitLab OpenTofu CI/CD component (gitlab.com/components/opentofu). Covers include syntax, all component inputs, the three job templates it generates, Vault OIDC token wiring, and advanced features like drift detection and MR plan reuse.
 metadata:
-  review_after: "2026-08-09"
+  review_after: "2027-01-25"
   docs_url: "https://gitlab.com/components/opentofu"
-  version_pinned: "4.7.0"
+  version_pinned: "4.9.0"
 ---
 
 # OpenTofu GitLab Component
@@ -17,9 +17,9 @@ The official GitLab CI/CD component for OpenTofu. It generates three hidden job 
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.7.0
+  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.9.0
     inputs:
-      opentofu_version: "1.12.1"
+      opentofu_version: "1.13.2"
       root_dir: infrastructure/terraform/my-project
       state_name: production
       enable_id_tokens: true
@@ -61,9 +61,9 @@ stages:
   - opentofu_apply
 
 include:
-  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.7.0
+  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.9.0
     inputs:
-      opentofu_version: "1.12.1"
+      opentofu_version: "1.13.2"
       root_dir: infrastructure/terraform/my-project
       state_name: production
       enable_id_tokens: true
@@ -218,20 +218,20 @@ For monorepos with multiple Terraform roots, include the component multiple time
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.7.0
+  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.9.0
     inputs:
       root_dir: infrastructure/terraform/storage
       state_name: storage
-      opentofu_version: "1.12.1"
+      opentofu_version: "1.13.2"
       auto_define_backend: true
       enable_id_tokens: true
       base_os: alpine
 
-  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.7.0
+  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.9.0
     inputs:
       root_dir: infrastructure/terraform/networking
       state_name: networking
-      opentofu_version: "1.12.1"
+      opentofu_version: "1.13.2"
       auto_define_backend: true
       enable_id_tokens: true
       base_os: alpine
@@ -245,9 +245,9 @@ Then define separate validate/plan/apply jobs extending each template set.
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.7.0
+  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.9.0
     inputs:
-      opentofu_version: "1.12.1"      # exact version or "latest"
+      opentofu_version: "1.13.2"      # exact version or "latest"
       root_dir: "."                   # path to root module
       state_name: "production"        # GitLab HTTP backend state name
       enable_id_tokens: true          # enable OIDC for Vault/cloud auth
@@ -268,7 +268,7 @@ include:
 ```yaml
 # Use $CI_SERVER_FQDN for self-managed instances, gitlab.com for SaaS
 include:
-  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.7.0
+  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.9.0
 ```
 
 Check that the version exists: `git clone https://.../components/opentofu` and check available tags.

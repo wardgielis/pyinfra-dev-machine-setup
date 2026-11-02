@@ -2,9 +2,9 @@
 name: pyinfra
 description: Use when writing, modifying, or running pyinfra deploy scripts. Covers CLI usage, connectors (@local/@ssh/@docker), brew/files/server operations, best practices for idempotent machine management, and the dev-machine-setup project patterns.
 metadata:
-  review_after: "2026-10-09"
-  docs_url: "https://docs.pyinfra.com/"
-  version_pinned: "3.x"
+  review_after: "2027-01-25"
+  docs_url: "https://docs.pyinfra.com/en/3.x/llms.txt"
+  version_pinned: "3.x (currently 3.10.0)"
 ---
 
 # pyinfra

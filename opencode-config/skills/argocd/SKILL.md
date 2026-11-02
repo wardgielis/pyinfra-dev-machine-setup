@@ -14,6 +14,8 @@ Operating manual for Argo CD: why it is the right choice for a team learning Kub
 
 **Related skills**: [[kubernetes]] for generic Kubernetes practice (manifests, networking, storage, security, monorepo layout), [[naturalis-kubernetes]] for org conventions (Vault address and roles, the self-managed GitLab instance, OpenStack, environment tiers), [[gitlab-cicd]] for CI/CD and the Component Catalog, [[glab-cli]] for `glab`, [[airflow]] for Airflow itself, [[opentofu]] / [[naturalis-opentofu]] for the infrastructure underneath, [[pyinfra]] / [[biocloud-pyinfra]] for node configuration.
 
+**MCP server available**: `mcp.servers.argocd` in `files/opencode_config.jsonc` wires up `argoproj-labs/mcp-for-argocd` (via `npx argocd-mcp stdio` — the `stdio` subcommand is required, without it the process exits immediately) for live application/cluster state (`list_applications`, `sync_application`, `get_application_resource_tree`, etc.) — prefer it over `argocd` CLI calls when just inspecting or syncing state. It needs `ARGOCD_BASE_URL` and `ARGOCD_API_TOKEN` set in `.env` (generate a token via Argo CD's Settings > Accounts, or `argocd account generate-token`); until then it's wired but inert. Still use the CLI/manifests below for anything it doesn't cover (installation, AppProject setup, repo credential wiring).
+
 ## Contents
 
 1. [The decision: why Argo CD](#1-the-decision-why-argo-cd)

@@ -2,8 +2,9 @@
 name: spark
 description: Use when writing Spark transformations, Delta Lake operations, or Databricks workflows. Generic PySpark/Delta Lake/Databricks patterns. Does NOT contain project-specific paths or configs.
 metadata:
-  review_after: "2026-08-09"
-  docs_url: "https://spark.apache.org/docs/latest/"
+  review_after: "2027-01-25"
+  docs_url: "https://spark.apache.org/docs/llms.txt"
+  version_pinned: "Spark 4.x (currently 4.2.0)"
 ---
 
 # Apache Spark & Delta Lake
@@ -81,7 +82,7 @@ for c in cols:
 
 ### UDFs
 
-Avoid UDFs entirely — native PySpark functions are dramatically more performant.
+Avoid UDFs entirely — native PySpark functions are dramatically more performant. Since Spark 4.0, Python UDFs use Arrow-optimized serialization by default, narrowing (but not closing) the gap — native functions remain the default choice.
 
 ### Chaining
 
@@ -327,3 +328,8 @@ assert actual == expected
 - Prefer window functions over `groupBy` when preserving row context matters — `groupBy` collapses rows, windows don't
 - Use `F.lit(None)` for empty columns, never `F.lit('')` or `F.lit('NA')`
 - Always specify explicit frame `.rowsBetween(...)` in window functions to avoid implicit behavior
+
+## Related Skills
+
+- [[biocloud-databricks]]: our workspace configs, cluster settings, and environment-specific Databricks/PySpark setup
+- [[datacontract]]: ODCS contracts that validate against these DataFrames via the `spark` export format and Python API

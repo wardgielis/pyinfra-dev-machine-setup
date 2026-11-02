@@ -2,9 +2,9 @@
 name: opentofu
 description: Use when writing, modifying, or reviewing OpenTofu/Terraform HCL code, running tofu CLI commands, managing state, designing modules, or provisioning infrastructure. Covers language, CLI, best practices, and OpenTofu-specific features like state encryption.
 metadata:
-  review_after: "2026-08-09"
+  review_after: "2027-01-25"
   docs_url: "https://opentofu.org/docs/"
-  version_pinned: "1.12.x"
+  version_pinned: "1.13.x"
 ---
 
 # OpenTofu
@@ -12,6 +12,12 @@ metadata:
 OpenTofu is an open-source fork of Terraform. HCL syntax and CLI commands are identical to Terraform with additional OpenTofu-specific features (state encryption, for_each on unknown values, etc.).
 
 **Related skills**: [[opentofu-gitlab-component]] for CI/CD integration; [[naturalis-opentofu]] for Naturalis/arise-biodiversity conventions; [[naturalis-terraform-pitfalls]] for common pitfalls.
+
+**MCP server available**: `mcp.servers.opentofu` in `files/opencode_config.jsonc` connects to the official OpenTofu MCP server (`https://mcp.opentofu.org/mcp`, hosted, no auth, no local runtime) for live OpenTofu **Registry** lookups — `search-opentofu-registry`, `get-provider-details`, `get-module-details`, `get-resource-docs`, `get-datasource-docs`. Prefer it over guessing provider arguments or module inputs from memory, and over `tofu` CLI registry commands. It is registry-only: it has no plan/apply, no state access, and no workspace management, so anything touching real infrastructure still goes through the CLI below. (It replaced HashiCorp's `terraform-mcp-server`, which queried the HashiCorp registry and dragged in a Docker dependency; this org is OpenTofu-only.)
+
+## What's New in 1.13 (Sep 2026)
+
+A relatively light release: `convert`/`assume` planning functions to reduce unknown values at plan time, Windows ARM64 packages, and extended state encryption key providers (GCP KMS authenticated data, AWS KMS encryption context, OpenBao associated data). Breaking: WinRM removed from provisioners, `base64gzip` output bytes changed, macOS 13+ required, last series with official 32-bit builds. 1.13.x has security support until August 2027.
 
 ## CLI Workflow
 

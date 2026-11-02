@@ -379,6 +379,13 @@ os.environ.setdefault(
 # scripts/find-endpoint.sh) and override PYCHARM_MCP_URL in .env if it changed.
 os.environ.setdefault("PYCHARM_MCP_URL", "http://127.0.0.1:64462/stream")
 
+# Argo CD MCP server (argoproj-labs/mcp-for-argocd, run via `npx argocd-mcp`). No sensible
+# default exists for these — leave blank until you generate an API token in Argo CD
+# (Settings > Accounts, or `argocd account generate-token`) and set both in .env. Blank
+# values mean the MCP server is wired but inert (it'll fail to auth, not break the deploy).
+os.environ.setdefault("ARGOCD_BASE_URL", "")
+os.environ.setdefault("ARGOCD_API_TOKEN", "")
+
 files.directory(
     name="Ensure ~/.config/opencode exists",
     path=os.path.expanduser("~/.config/opencode"),
@@ -394,7 +401,7 @@ files.directory(
 _deploy_template(
     "~/.config/opencode/opencode.jsonc",
     "opencode_config.jsonc",
-    ["OPENCODE_SKILLS_PATH", "PYCHARM_MCP_URL"],
+    ["OPENCODE_SKILLS_PATH", "PYCHARM_MCP_URL", "ARGOCD_BASE_URL", "ARGOCD_API_TOKEN"],
 )
 
 files.put(

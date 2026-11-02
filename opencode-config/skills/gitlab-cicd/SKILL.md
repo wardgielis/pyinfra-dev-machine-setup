@@ -38,9 +38,9 @@ All from `gitlab.com/components/` — include via `$CI_SERVER_FQDN` (not hardcod
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.7.0
+  - component: $CI_SERVER_FQDN/components/opentofu/job-templates@4.9.0
     inputs:
-      opentofu_version: "1.12.1"
+      opentofu_version: "1.13.2"
       root_dir: infrastructure/terraform/my-project
       state_name: production
       enable_id_tokens: true

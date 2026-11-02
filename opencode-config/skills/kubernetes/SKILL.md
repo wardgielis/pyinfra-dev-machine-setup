@@ -2,7 +2,7 @@
 name: kubernetes
 description: Use when working with Kubernetes — writing or reviewing manifests, Helm charts, Kustomize bases/overlays, choosing a control plane, GitOps (Argo CD, Flux), CI/CD through the GitLab agent, networking (Gateway API, NetworkPolicy, Cilium), autoscaling (HPA/VPA/KEDA/Karpenter), secrets (External Secrets Operator/Vault), security (Pod Security Standards, Kyverno), upgrades and version skew, or deploying services such as Airflow onto a cluster. Also covers how to lay out Kubernetes manifests in a monorepo and how to manage them at scale. Read [[argocd]] for our GitOps controller in depth and [[naturalis-kubernetes]] for org-specific conventions.
 metadata:
-  review_after: "2026-11-01"
+  review_after: "2027-01-20"
   docs_url: "https://kubernetes.io/docs/concepts/configuration/best-practices/"
 ---
 
@@ -2329,7 +2329,7 @@ Verified against upstream release metadata. **Re-check before pinning** — thes
 | KEDA | v2.21.0 | |
 | Kueue | v0.20.0 | API `kueue.x-k8s.io/v1beta2`; requires Kubernetes 1.29+ |
 | Spark operator (Kubeflow) | v2.5.2 | API `sparkoperator.k8s.io/v1beta2`; base Spark 4.0.x, supports Spark 2.3+ |
-| Apache Spark | v4.0.x | Check the Spark/Kubernetes compatibility matrix before pinning |
+| Apache Spark | v4.2.0 | Check the Spark/Kubernetes compatibility matrix before pinning |
 | Helm | v4.3.0 | Charts must be `apiVersion: v2`; Helmfile supports Helm 3 and 4 |
 | Airflow chart | see [[airflow]] | Requires Kubernetes 1.30+, Helm 3.19+ |
 

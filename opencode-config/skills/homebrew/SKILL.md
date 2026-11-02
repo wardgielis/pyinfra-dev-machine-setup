@@ -2,9 +2,9 @@
 name: homebrew
 description: Use when working with Homebrew on macOS — installing formulae/casks, managing taps, configuring autoupdate, or mapping brew CLI commands to pyinfra brew operations. Covers best practices for using Homebrew as the package backend for macOS dev machine setup.
 metadata:
-  review_after: "2026-10-09"
+  review_after: "2027-01-25"
   docs_url: "https://docs.brew.sh/"
-  version_pinned: "homebrew/4.x"
+  version_pinned: "homebrew/7.x"
 ---
 
 # Homebrew
@@ -200,6 +200,14 @@ brew analytics state     # show current state
 
 > **Best practice**: run `brew analytics off` once after installing Homebrew. The `HOMEBREW_NO_ANALYTICS=1` env var achieves the same without the plist entry.
 
+### Vulnerability checking (new in 7.0)
+
+```sh
+brew vulns ripgrep       # check known CVEs for a formula's installed version
+```
+
+Checks installed formula versions against Homebrew's vulnerability advisory database.
+
 ### Configuration & path introspection
 
 ```sh
@@ -265,6 +273,8 @@ brew mcp-server          # start the Homebrew MCP server (AI integration)
 
 The MCP server exposes Homebrew functionality via the Model Context Protocol, enabling AI assistants to query and manage packages.
 
+**Wired in this repo**: `mcp.servers.homebrew` in `files/opencode_config.jsonc` runs this automatically — no auth, no extra setup. Prefer it for live state (`brew list`, `brew info`, `brew outdated`) over shelling out; fall back to the CLI reference above for anything the MCP doesn't expose (e.g. `brew bundle`, tap management).
+
 ---
 
 ## Taps
@@ -287,6 +297,8 @@ brew untap databricks/tap
 # Repair tap structure (one-time migration from symlink to directory-based)
 brew tap --repair
 ```
+
+> **Tap trust (since 6.0)**: Homebrew verifies tap authenticity before installing from third-party taps (e.g. `anomalyco/tap`, `databricks/tap` used in this project). A prompt to confirm trust on first use of an unrecognized tap is expected, not a sign of a broken tap.
 
 After tapping, formulae in the tap are available as `owner/tap/formula` or just `formula` if unambiguous:
 
@@ -408,6 +420,14 @@ cask "vscodium"
 
 **When to use Brewfile vs pyinfra**: pyinfra is the primary tool because it's more expressive (conditional logic, config file deployment, secrets). The Brewfile is useful as a fallback bootstrap when pyinfra isn't set up yet, or to share a quick snapshot with others.
 
+### Brewfile changes in 7.0
+
+- `brew bundle` can now restore language tools from declared sources (Cargo Git repos/paths, `source:` for remote uv tools) — fewer separate install steps to reproduce an environment.
+- `brew deps --brewfile` inspects a Brewfile's dependency tree before installing it.
+- `brew vulns --brewfile` scans everything a Brewfile would install for known CVEs.
+- `HOMEBREW_BUNDLE_JOBS`/`HOMEBREW_BUNDLE_NO_JOBS` are disabled — `HOMEBREW_DOWNLOAD_CONCURRENCY` now controls bundle download concurrency too.
+- `brew bundle install --cleanup` is disabled — run `brew bundle cleanup` as a separate step instead.
+
 ---
 
 ## Homebrew Services
@@ -504,6 +524,10 @@ Get the prefix dynamically: `$(brew --prefix)`. Use this in shell configs instea
 eval "$(/opt/homebrew/bin/brew shellenv)"  # Apple Silicon
 # or in zshrc: eval "$(brew shellenv)"     # portable
 ```
+
+### Intel Mac support (since 7.0.0)
+
+Intel Macs moved to Tier 3 support — community-maintained, bottles not guaranteed for every formula. macOS 10.15 (Catalina) is no longer supported at all. Expect more source builds over time on Intel hardware.
 
 ### ARM vs Intel bottle availability
 
