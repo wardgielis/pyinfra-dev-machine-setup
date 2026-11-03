@@ -2,7 +2,7 @@
 name: kubernetes
 description: Use when working with Kubernetes — writing or reviewing manifests, Helm charts, Kustomize bases/overlays, choosing a control plane, GitOps (Argo CD, Flux), CI/CD through the GitLab agent, networking (Gateway API, NetworkPolicy, Cilium), autoscaling (HPA/VPA/KEDA/Karpenter), secrets (External Secrets Operator/Vault), security (Pod Security Standards, Kyverno), upgrades and version skew, or deploying services such as Airflow onto a cluster. Also covers how to lay out Kubernetes manifests in a monorepo and how to manage them at scale. Read [[argocd]] for our GitOps controller in depth and [[naturalis-kubernetes]] for org-specific conventions.
 metadata:
-  review_after: "2027-01-20"
+  review_after: "2027-05-01"
   docs_url: "https://kubernetes.io/docs/concepts/configuration/best-practices/"
 ---
 
@@ -10,7 +10,7 @@ metadata:
 
 Operating manual for running Kubernetes: the mental model that prevents expensive mistakes, the monorepo layouts that keep manifests manageable, the GitLab integration, and the per-subsystem practices worth actually following.
 
-**Related skills**: [[argocd]] for Argo CD — our GitOps controller — in depth, [[naturalis-kubernetes]] for org conventions (Vault, the self-managed GitLab instance, OpenStack), [[gitlab-cicd]] for CI/CD and the Component Catalog, [[glab-cli]] for `glab`, [[opentofu]] / [[naturalis-opentofu]] for provisioning the machines underneath, [[pyinfra]] / [[biocloud-pyinfra]] for host configuration, [[airflow]] for Airflow specifics, [[databricks]] / [[biocloud-databricks]] for Databricks, [[aws-cli]] for cloud verification.
+**Related skills**: [[argocd]] for Argo CD — our GitOps controller — in depth, [[naturalis-kubernetes]] for org conventions (Vault, the GitLab.com group layout, OpenStack), [[gitlab-cicd]] for CI/CD and the Component Catalog, [[glab-cli]] for `glab`, [[opentofu]] / [[naturalis-opentofu]] for provisioning the machines underneath, [[pyinfra]] / [[biocloud-pyinfra]] for host configuration, [[airflow]] for Airflow specifics, [[databricks]] / [[biocloud-databricks]] for Databricks, [[aws-cli]] for cloud verification.
 
 Two related skills are **repo-local to other repositories**, so they are referenced by name rather than linked: `biocloud-kubernetes` (the concrete cluster implementation) and `airflow-dag` (our DAG patterns), both under `.opencode/skills/` in their own repos. A wikilink to either would resolve to nothing from here.
 

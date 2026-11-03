@@ -2,7 +2,7 @@
 name: argocd
 description: Use when installing, configuring, operating, or troubleshooting Argo CD — Application and ApplicationSet resources, AppProjects, sync waves and hooks, sync options (ServerSideApply, Replace, CreateNamespace, Prune), repository layout, GitLab integration (deployment tracking, webhooks, SSO, repo credentials), secrets via External Secrets Operator, RBAC and SSO, scaling the repo-server and application controller, upgrades and CVEs, and per-chart gotchas (Airflow, cert-manager, ingress-nginx, Helm hooks). Argo CD is the GitOps controller we standardise on. Read [[kubernetes]] for generic Kubernetes practice and [[naturalis-kubernetes]] for org conventions.
 metadata:
-  review_after: "2026-11-08"
+  review_after: "2027-02-01"
   docs_url: "https://argo-cd.readthedocs.io/en/stable/"
 ---
 
@@ -12,7 +12,7 @@ Operating manual for Argo CD: why it is the right choice for a team learning Kub
 
 **Argo CD is our GitOps controller.** Everything in the cluster arrives through it. If a change did not come from Git via Argo CD, it is drift.
 
-**Related skills**: [[kubernetes]] for generic Kubernetes practice (manifests, networking, storage, security, monorepo layout), [[naturalis-kubernetes]] for org conventions (Vault address and roles, the self-managed GitLab instance, OpenStack, environment tiers), [[gitlab-cicd]] for CI/CD and the Component Catalog, [[glab-cli]] for `glab`, [[airflow]] for Airflow itself, [[opentofu]] / [[naturalis-opentofu]] for the infrastructure underneath, [[pyinfra]] / [[biocloud-pyinfra]] for node configuration.
+**Related skills**: [[kubernetes]] for generic Kubernetes practice (manifests, networking, storage, security, monorepo layout), [[naturalis-kubernetes]] for org conventions (Vault address and roles, the GitLab.com group layout, OpenStack, environment tiers), [[gitlab-cicd]] for CI/CD and the Component Catalog, [[glab-cli]] for `glab`, [[airflow]] for Airflow itself, [[opentofu]] / [[naturalis-opentofu]] for the infrastructure underneath, [[pyinfra]] / [[biocloud-pyinfra]] for node configuration.
 
 **MCP server available**: `mcp.servers.argocd` in `files/opencode_config.jsonc` wires up `argoproj-labs/mcp-for-argocd` (via `npx argocd-mcp stdio` — the `stdio` subcommand is required, without it the process exits immediately) for live application/cluster state (`list_applications`, `sync_application`, `get_application_resource_tree`, etc.) — prefer it over `argocd` CLI calls when just inspecting or syncing state. It needs `ARGOCD_BASE_URL` and `ARGOCD_API_TOKEN` set in `.env` (generate a token via Argo CD's Settings > Accounts, or `argocd account generate-token`); until then it's wired but inert. Still use the CLI/manifests below for anything it doesn't cover (installation, AppProject setup, repo credential wiring).
 
@@ -743,7 +743,7 @@ Four things to get right:
 
 - **`oncePer: app.status.sync.revision`** — without it you get a deployment record on every reconciliation, not every commit.
 - **The token goes in a Secret.** Use `$gitlab-token` referencing `argocd-notifications-secret`, and populate that Secret from Vault via ESO. A project access token pasted into a ConfigMap is a finding waiting to happen.
-- **`url` is our self-managed instance**, not `gitlab.com` — the `$CI_SERVER_FQDN` convention from [[naturalis-kubernetes]] §2.
+- **`url` is `https://gitlab.com`** — our GitLab is GitLab.com SaaS, not self-hosted. Build it from `$CI_SERVER_FQDN` only for portability, not because the host differs.
 - **Report failures too.** Add an `on-sync-failed` trigger posting `"status": "failed"`, or GitLab's environment view will only ever show successes.
 
 Debug with:

@@ -28,7 +28,6 @@
       },
       "atlassian": { "type": "remote", "url": "https://mcp.atlassian.com/v2/mcp" },
       "gitlab": { "type": "remote", "url": "https://gitlab.com/api/v4/mcp" },
-      "gitlab-naturalis": { "type": "remote", "url": "https://gitlab.naturalis.io/api/v4/mcp" },
       "opentofu": { "type": "remote", "url": "https://mcp.opentofu.org/mcp" },
       "aws": {
         "type": "local",

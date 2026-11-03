@@ -2,7 +2,7 @@
 name: glab-cli
 description: Use when interacting with GitLab via the glab CLI — on gitlab.com or a self-managed instance. Covers host resolution for self-managed GitLab, MR creation/review, pipeline management, issue tracking, repository operations, and the `glab cluster agent` commands for Kubernetes access.
 metadata:
-  review_after: "2026-11-09"
+  review_after: "2027-02-01"
   docs_url: "https://gitlab.com/gitlab-org/cli/-/tree/main/docs"
 ---
 
@@ -10,11 +10,7 @@ metadata:
 
 Authentication is managed via `GITLAB_TOKEN` env var or `glab auth login`.
 
-**MCP server available**: two entries in `files/opencode_config.jsonc`, both GitLab's official built-in MCP server (GA since GitLab 19.5), authenticated via an interactive OAuth browser flow on first use — no `.env` entry needed, and an admin must have allowed MCP for the instance/group:
-- `mcp.servers.gitlab` → `https://gitlab.com/api/v4/mcp` (works anywhere; matches the `glab` login on this machine)
-- `mcp.servers.gitlab-naturalis` → `https://gitlab.naturalis.io/api/v4/mcp` (the org's self-managed instance — only resolves on the corporate network/VPN)
-
-Prefer them for live MR/issue/pipeline state; fall back to `glab` below for anything they don't cover.
+**MCP server available**: `mcp.servers.gitlab` in `files/opencode_config.jsonc` connects to GitLab's official built-in MCP server at `https://gitlab.com/api/v4/mcp` (GA since GitLab 19.5). Authenticate once with `opencode mcp auth gitlab` — it opens a browser OAuth flow and stores the `mcp`-scoped token in `~/.local/share/opencode/mcp-auth.json`. No `.env` entry needed. On GitLab.com the MCP server must be allowed for our top-level group (`naturalis` or `arise-biodiversity`) by a group Owner. **The `glab` token cannot be reused for this** — `/api/v4/mcp` rejects legacy PATs even with `api` scope (403 `insufficient_scope`, `scope: mcp`); only an OAuth `mcp` token or a *fine-grained* PAT with the MCP resource + Execute works. Prefer the MCP for live MR/issue/pipeline state; fall back to `glab` below for anything it doesn't cover.
 
 ## Auto-detection
 
@@ -27,7 +23,7 @@ git remote -v
 - Remote is **any GitLab host** — `gitlab.com` *or* a self-managed instance → use this skill (glab CLI)
 - Remote is `github.com` → use the [[gh-cli]] skill instead
 
-**Most of our work is on a self-managed instance, not `gitlab.com`.** Do not treat a non-`gitlab.com` remote as "not GitLab".
+**Our GitLab is `gitlab.com` (SaaS), not self-hosted** — work lives in the `naturalis/*` and `arise-biodiversity/*` top-level groups. The self-managed guidance below is reference material for other instances, not our setup; don't assume a `gitlab.naturalis.io` host exists.
 
 ### Host resolution on self-managed GitLab
 
