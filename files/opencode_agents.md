@@ -103,6 +103,30 @@ connections). Prefer it over shell tooling when IDE-accurate answers matter.
 Full tool map, pre-flight checks, index-lag discipline and troubleshooting: load the
 **[[pycharm]]** skill.
 
+## If the `claude-code` provider dies
+
+Symptom: a `claude-code` session or subagent fails immediately with
+`Could not resolve command on PATH: claude`, or `claude` simply isn't on PATH. The plugin
+resolves `claude` from PATH with **no bundled fallback**, so a missing binary takes the
+whole provider down.
+
+Cause: an interrupted `brew upgrade`. Homebrew removes a cask's version directory before
+staging the new one, so a killed or failed upgrade leaves
+`/opt/homebrew/Caskroom/claude-code/` holding only `.metadata/` — no binary, no version
+dir. `brew list --cask` still lists the cask while `brew info --cask` says "Not installed".
+The same state makes every pyinfra run abort at Section 2 (`BrewCasks` fact).
+
+Fail-safe — run the doctor, don't hand-debug it:
+
+```bash
+bash ~/pyinfra-dev-machine-setup/scripts/cask-doctor.sh   # detects + reinstalls broken casks
+```
+
+It is idempotent and no-ops on a healthy machine, and `deploy.py` runs it at load time on
+every deploy. If you repair manually, use `brew uninstall --cask <name> --force` then
+`brew install --cask <name>` — **never `--zap`**, which deletes `~/.claude.json` and the
+CLI credentials and forces a fresh login. Details: the **[[homebrew]]** skill.
+
 ## Keeping AGENTS.md up to date
 
 When you complete a task, phase, or to-do item that is listed in AGENTS.md, update the file

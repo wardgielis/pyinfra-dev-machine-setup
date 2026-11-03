@@ -3,6 +3,8 @@ import os
 import pathlib
 import shutil
 import string
+import subprocess
+import sys
 from pyinfra.operations import brew, files, python, server
 
 
@@ -41,6 +43,26 @@ for _line in _env_path.read_text().splitlines():
         os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 
 # ============================================================
+# SECTION 0: REPAIR HALF-REMOVED CASKS
+# An interrupted `brew upgrade` deletes a cask's version directory
+# before staging the new one, leaving Caskroom/<cask>/.metadata and
+# nothing else. `brew list --cask` still lists it, but
+# `brew list --cask --versions` errors, which makes the BrewCasks
+# fact raise and kills the whole run at Section 2.
+#
+# This has to happen here rather than as a pyinfra operation:
+# pyinfra builds its "Detected changes" preview by gathering every
+# operation's facts BEFORE running any operation, so an early
+# Section 0 op would still be too late. Same reason the `brew trust`
+# loop below runs at import time. scripts/cask-doctor.sh is also the
+# manual recovery path documented in the [[homebrew]] skill.
+# ============================================================
+_cask_doctor = pathlib.Path(__file__).resolve().parent / "scripts" / "cask-doctor.sh"
+
+if "--dry" not in sys.argv:
+    subprocess.run(["bash", str(_cask_doctor)], check=True)
+
+# ============================================================
 # DATA: All managed packages — single source of truth
 # Packages defined here are installed AND protected from cleanup.
 # Anything in brew but NOT listed below will be flagged for removal.
@@ -61,6 +83,11 @@ for _tap in TAPS:
 PERSONAL_CASKS = [
     "league-of-legends",  # Games
     "claude",             # Anthropic desktop app
+    # Hard dependency of opencode's `claude-code` provider — NOT an experiment.
+    # The plugin resolves `claude` from PATH with no fallback, so losing this
+    # cask kills the provider outright. Keep it declared so Section 7's
+    # `brew bundle cleanup` never treats it as drift.
+    "claude-code",        # Anthropic Claude Code CLI
     "brave-browser",      # Privacy-focused browser
     "spotify",            # Music streaming
     "logi-options+",      # Logitech mouse/keyboard software
@@ -72,7 +99,6 @@ EVAL_CASKS = [          # Trying these out — promote or drop as needed
     "zen",
     "keepingyouawake",
     "headlamp",         # docker desktop equivalent for k8s
-    "claude-code",
 ]
 
 GUI_CASKS = [

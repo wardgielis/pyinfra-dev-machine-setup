@@ -87,18 +87,22 @@ brew uninstall --cask --zap ghostty
 ### Updating and Upgrading
 
 ```sh
-brew update              # refresh the package index (fetch new formula versions)
-brew upgrade             # upgrade all installed formulae to latest
-brew upgrade ripgrep     # upgrade a single formula
-brew upgrade --cask      # upgrade all casks
-brew upgrade --cask ghostty  # upgrade a single cask
+brew update                       # refresh the package index (fetch new formula versions)
+brew upgrade --formula            # upgrade all installed formulae only
+brew upgrade --cask               # upgrade all casks (see the warning below)
+brew upgrade --cask ghostty       # upgrade a single cask
+brew upgrade ripgrep              # upgrade a single formula
+brew upgrade                      # formulae AND casks — easy to interrupt mid-cask
 
-brew outdated            # list formulae/casks with available updates
+brew outdated                     # list formulae/casks with available updates
+brew outdated --formula
 brew outdated --cask
-brew outdated --json     # JSON output for scripting
+brew outdated --json              # JSON output for scripting
 ```
 
 > **`update` vs `upgrade`**: `brew update` fetches the latest formula definitions (like `git pull`). `brew upgrade` installs newer versions. You almost always need `update` before `upgrade` to know what's available.
+>
+> **Bare `brew upgrade` includes casks**, and a cask upgrade is a delete-then-install of a whole `.app`/binary — a 200–300 MB download for something like `claude-code`. Interrupting one (Ctrl-C, closed terminal, sleep, flaky network overnight) leaves the cask half-installed; see [Cask left half-installed](#cask-left-half-installed-after-an-interrupted-upgrade). For routine upgrades prefer `brew upgrade --formula` and upgrade casks deliberately, one at a time.
 
 ### Pinning (prevent accidental upgrades)
 
@@ -586,6 +590,7 @@ This takes ownership of the existing app in `/Applications` without overwriting 
 - **Prefer casks for GUI apps** — they handle app updates, quarantine removal, and macOS integration (Spotlight, etc.) better than manual installs
 - **Run `brew doctor` before debugging** — it diagnoses 90% of Homebrew issues automatically
 - **Group related packages** in one `brew.packages()` call for readability — pyinfra's log output shows the `name=` label, not individual packages
+- **Upgrade formulae with `brew upgrade --formula`** — bare `brew upgrade` also upgrades casks, and an interrupted cask upgrade leaves it half-installed with no automatic recovery ([details](#cask-left-half-installed-after-an-interrupted-upgrade))
 - **Opt out of analytics** — run `brew analytics off` once after install, or set `HOMEBREW_NO_ANALYTICS=1` in your shell config
 - **Use `brew leaves --installed-on-request`** when auditing `deploy.py` — cross-reference with your package list to spot anything you installed ad-hoc outside of pyinfra
 - **Use `brew install --cask --adopt`** to take ownership of manually-installed apps so Homebrew can manage updates
@@ -668,6 +673,47 @@ brew install --cask --force ghostty  # overwrite the existing app
 Or use `--adopt` to take ownership of the existing installation without overwriting.
 
 Or move the existing app to Trash first, then install normally.
+
+### Cask left half-installed after an interrupted upgrade
+
+**Cause**: Homebrew deletes a cask's old version directory *before* staging the new one. If the upgrade is cut short (Ctrl-C, closed terminal, network drop, machine sleep during an overnight `brew upgrade`), the cask is left in a half-state that Homebrew has no automatic recovery for.
+
+**Signature** — the receipt says one thing, the disk says another:
+
+```sh
+ls -la "$(brew --caskroom)/<cask>"        # only .metadata/ — no version dir
+brew list --cask                           # still lists the cask
+brew list --cask --versions <cask>          # errors
+brew info --cask <cask>                    # "Not installed"
+```
+
+Downstream effects: the binary is gone from `/opt/homebrew/bin`, so anything resolving it from PATH dies (opencode's `claude-code` provider throws `Could not resolve command on PATH: claude`), and pyinfra aborts before Section 2 because the `BrewCasks` fact raises.
+
+**Detect every broken cask at once** — cheap, read-only:
+
+```sh
+for d in "$(brew --caskroom)"/*/; do
+  n=$(ls -1 "$d" 2>/dev/null | grep -v '^\.metadata$' | wc -l | tr -d ' ')
+  [ "$n" = 0 ] && echo "BROKEN: $d"
+done
+```
+
+**Fix** — force uninstall (do **not** add `--zap`) and reinstall:
+
+```sh
+brew uninstall --cask <cask> --force
+brew install --cask <cask>
+```
+
+`--force` is required because the corrupt receipt makes a normal uninstall refuse; it leaves the user's own files alone. `--zap` would delete `~/.claude.json`, `~/.config/claude` and `~/.local/share/claude` — a needless re-login.
+
+In this repo, use the doctor instead of hand-debugging. It finds casks with only `.metadata/` left, repairs them, and no-ops on a healthy machine:
+
+```sh
+bash ~/pyinfra-dev-machine-setup/scripts/cask-doctor.sh
+```
+
+`deploy.py` runs it at load time (Section 0) precisely because pyinfra gathers operation facts *before* running anything — an early pyinfra op would be too late to save the `BrewCasks` fact.
 
 ### `brew upgrade` breaks a tool
 
