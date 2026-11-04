@@ -4,12 +4,12 @@ description: Use when writing, modifying, linting, or testing ODCS data contract
 metadata:
   review_after: "2026-12-26"
   docs_url: "https://cli.datacontract.com/llms.txt"
-  version_pinned: "ODCS v3.2.0 / datacontract-cli v1.2.8"
+  version_pinned: "ODCS v3.2.0 / datacontract-cli v1.2.9"
 ---
 
 # Data Contract (ODCS)
 
-The **Open Data Contract Standard (ODCS)** is a YAML specification for machine-readable data contracts, currently at **v3.2.0** (released Sep 2026 by the Bitol/Linux Foundation project; this skill was originally written against v3.1.0, which remains valid — v3.2.0 is additive). The **datacontract CLI** (currently v1.2.8) validates, tests, exports, and imports those contracts.
+The **Open Data Contract Standard (ODCS)** is a YAML specification for machine-readable data contracts, currently at **v3.2.0** (released Sep 2026 by the Bitol/Linux Foundation project; this skill was originally written against v3.1.0, which remains valid — v3.2.0 is additive). The **datacontract CLI** (currently v1.2.9) validates, tests, exports, and imports those contracts.
 
 **Related skills**: [[databricks]] for extracting schemas from Unity Catalog. Two sibling skills are **repo-local to the data-platform repo** (`.opencode/skills/`), so they are named rather than linked: `biocloud-datacontract` for our project conventions, and `new-table` for scaffolding new tables with contracts.
 
@@ -91,7 +91,7 @@ Required fields: `apiVersion`, `kind`, `id`, `version`, `status`
 
 Released September 2026 (alongside ODPS v1.1.0). Additive — v3.1.0 contracts remain valid. Worth adopting for new contracts:
 
-- **`enum`** on `logicalTypeOptions` — constrain a property to a fixed set of values, each with an optional label/description/tags (previously only possible via a `pattern` regex)
+- **`enum`** on the property itself, next to `logicalTypeOptions` (not inside it) — constrain a property to a fixed set of values, each with an optional value/description (previously only possible via a `pattern` regex). The validator rejects `enum` under `logicalTypeOptions`.
 - **`context`** block (on the contract and per-schema) — carries instructions, verified statements, and constraints for AI agents consuming the data
 - **`vector`** logical type — describes embeddings (dimensions, element type, distance metric, embedding model)
 - Synonyms, deprecation support, and ten new server types
@@ -100,13 +100,12 @@ Released September 2026 (alongside ODPS v1.1.0). Additive — v3.1.0 contracts r
 properties:
   - name: status
     logicalType: string
-    logicalTypeOptions:
-      enum:
-        - value: pending
-          description: Order placed, not yet processed
-        - value: shipped
-        - value: delivered
-        - value: cancelled
+    enum:
+      - value: pending
+        description: Order placed, not yet processed
+      - value: shipped
+      - value: delivered
+      - value: cancelled
 ```
 
 ## Schema
@@ -594,7 +593,8 @@ OpenDataContractStandard
         ├─ .classification: str       ← "public" | "restricted" | "confidential"
         ├─ .criticalDataElement: bool
         ├─ .examples: list[Any]
-        ├─ .logicalTypeOptions: dict  ← minLength, maxLength, format, enum, pattern, ...
+        ├─ .enum: list                ← allowed values (ODCS v3.2.0), each with .value and .description
+        ├─ .logicalTypeOptions: dict  ← minLength, maxLength, format, pattern, ...
         ├─ .transformLogic: str
         ├─ .transformSourceObjects: list[str]
         ├─ .customProperties: list[CustomProperty]
