@@ -412,6 +412,16 @@ os.environ.setdefault("PYCHARM_MCP_URL", "http://127.0.0.1:64462/stream")
 os.environ.setdefault("ARGOCD_BASE_URL", "")
 os.environ.setdefault("ARGOCD_API_TOKEN", "")
 
+# ClickHouse MCP servers (ClickHouse/mcp-clickhouse, run via `uvx mcp-clickhouse`), one per
+# environment. Blank until set in .env; use read-only ClickHouse users. Needs EduVPN.
+for _ch_var in (
+    "CLICKHOUSE_DEV_USER",
+    "CLICKHOUSE_DEV_PASSWORD",
+    "CLICKHOUSE_PROD_USER",
+    "CLICKHOUSE_PROD_PASSWORD",
+):
+    os.environ.setdefault(_ch_var, "")
+
 files.directory(
     name="Ensure ~/.config/opencode exists",
     path=os.path.expanduser("~/.config/opencode"),
@@ -427,7 +437,16 @@ files.directory(
 _deploy_template(
     "~/.config/opencode/opencode.jsonc",
     "opencode_config.jsonc",
-    ["OPENCODE_SKILLS_PATH", "PYCHARM_MCP_URL", "ARGOCD_BASE_URL", "ARGOCD_API_TOKEN"],
+    [
+        "OPENCODE_SKILLS_PATH",
+        "PYCHARM_MCP_URL",
+        "ARGOCD_BASE_URL",
+        "ARGOCD_API_TOKEN",
+        "CLICKHOUSE_DEV_USER",
+        "CLICKHOUSE_DEV_PASSWORD",
+        "CLICKHOUSE_PROD_USER",
+        "CLICKHOUSE_PROD_PASSWORD",
+    ],
 )
 
 files.put(

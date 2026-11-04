@@ -15,6 +15,30 @@
           "ARGOCD_API_TOKEN": "${ARGOCD_API_TOKEN}"
         }
       },
+      "clickhouse_development": {
+        "type": "local",
+        "command": ["uvx", "mcp-clickhouse"],
+        "environment": {
+          "CLICKHOUSE_HOST": "tools-development-clickhouse.hosts.naturalis.io",
+          "CLICKHOUSE_PORT": "8123",
+          "CLICKHOUSE_USER": "${CLICKHOUSE_DEV_USER}",
+          "CLICKHOUSE_PASSWORD": "${CLICKHOUSE_DEV_PASSWORD}",
+          "CLICKHOUSE_SECURE": "false",
+          "CLICKHOUSE_ALLOW_WRITE_ACCESS": "true",
+          "CLICKHOUSE_ALLOW_DROP": "true"
+        }
+      },
+      "clickhouse_production": {
+        "type": "local",
+        "command": ["uvx", "mcp-clickhouse"],
+        "environment": {
+          "CLICKHOUSE_HOST": "tools-production-clickhouse.hosts.naturalis.io",
+          "CLICKHOUSE_PORT": "8123",
+          "CLICKHOUSE_USER": "${CLICKHOUSE_PROD_USER}",
+          "CLICKHOUSE_PASSWORD": "${CLICKHOUSE_PROD_PASSWORD}",
+          "CLICKHOUSE_SECURE": "false"
+        }
+      },
       "atlassian": { "type": "remote", "url": "https://mcp.atlassian.com/v2/mcp" },
       "gitlab": { "type": "remote", "url": "https://gitlab.com/api/v4/mcp" },
       "opentofu": { "type": "remote", "url": "https://mcp.opentofu.org/mcp" },
