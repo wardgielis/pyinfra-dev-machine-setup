@@ -1,19 +1,8 @@
 {
   "$$schema": "https://opencode.ai/config.json",
-  "plugins": [
-    "@khalilgharbaoui/opencode-claude-code-plugin"
-  ],
   "policies": [
     { "action": "provider.use", "resource": "gitlab", "effect": "deny" }
   ],
-  "providers": {
-    "claude-code": {
-      "settings": {
-        "proxyTools": ["Bash", "Edit", "Write", "WebFetch"],
-        "bridgeOpencodeMcp": true
-      }
-    }
-  },
   "mcp": {
     "servers": {
       "pycharm": { "type": "remote", "url": "${PYCHARM_MCP_URL}" },

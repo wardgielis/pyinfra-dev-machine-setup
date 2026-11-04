@@ -32,7 +32,7 @@ This skill is the operating manual for managing **opencode itself in this repo**
 
 Key details:
 
-- **Config**: the template renders `$$schema` → `$schema`, and the V2 `skills` array is substituted from `OPENCODE_SKILLS_PATH`. It already includes the claude-code plugin and provider settings — preserve them when editing. `opencode.jsonc` in the repo is powered by these templates, not a standalone file; keep it that way. The config is **native V2** (`plugins`, `providers.*.settings`, `policies`, `skills` array) — do not reintroduce V1 keys (`plugin`, `provider.*.options`, `disabled_providers`, `skills.paths`).
+- **Config**: the template renders `$$schema` → `$schema`, and the V2 `skills` array is substituted from `OPENCODE_SKILLS_PATH`. It defines no provider plugin: Claude runs through opencode's built-in `claude-agent` provider (see below). `opencode.jsonc` in the repo is powered by these templates, not a standalone file; keep it that way. The config is **native V2** (`policies`, `mcp.servers`, `skills` array, and `providers.*.settings` when a provider needs options) — do not reintroduce V1 keys (`plugin`, `provider.*.options`, `disabled_providers`, `skills.paths`).
 - **Plugins**: repo-versioned, deploy-synced. Each plugin is a directory (`opencode-config/plugins/<id>/`) with a server entrypoint (`index.ts`) and, when it needs the terminal UI, a TUI entrypoint (`tui.ts`) importing `@opencode/plugin/tui`. The freshness plugin (`skill-freshness/`) shows a stale-skill toast from `tui.ts` on TUI startup — announced from `setup()` after a 1.5 s deferral, with `session.created` kept as a fallback and one guard shared by both, so it appears on the home screen and on resumed sessions too, at most once per run. Every run appends one line to `~/.local/share/opencode/log/skill-freshness.log` (`trigger=… stale=N toast=shown`), the quickest way to tell whether the plugin ran. When adding a plugin, put the source under `opencode-config/plugins/<id>/`, add any npm dependency to `opencode-config/package.json`, then run deploy so `npm install` picks it up.
 
   Entrypoints are resolved by `@opencode/plugin`'s `host.resolve`: `index.ts` is the **server** entrypoint (loads for every client), `tui.ts` the **terminal UI** entrypoint. Only the terminal CLI/TUI reconciles TUI plugins — the desktop app does not, so a toast emitted from `tui.ts` is invisible there. V2 has **no server-side** toast or log API (V1's `client.tui.showToast` / `client.app.log` are gone), so any user-facing notice must live in `tui.ts`.
@@ -41,6 +41,32 @@ Key details:
 
   **JSONC parsing gotcha**: plugins that read `opencode.jsonc` must strip comments string-aware. A naive `raw.replace(/\/\/.*$/gm, "")` corrupts `"$schema": "https://…"`, `JSON.parse` then throws, and a `try/catch` fallback silently degrades the plugin to a no-op. `skill-freshness/tui.ts` carries `parseJsonc()` for this.
 - **AGENTS.md**: always edit `files/opencode_agents.md` (this is the deployed file's source).
+
+## Claude Agent provider
+
+Claude models run through opencode's **built-in** provider since 2.2.3 (PR #58782): no
+plugin, no npm dependency, no config entry. It starts the installed `claude` CLI through
+the official Claude Agent SDK, and opencode keeps its own tools, permissions, AGENTS.md,
+skills, MCP servers and compaction.
+
+- **Provider id**: `claude-agent` ("Claude Agent"). Models are `claude-agent/opus`,
+  `claude-agent/sonnet`, `claude-agent/haiku` plus full ids, with effort as a variant:
+  `claude-agent/opus#high` (`low|medium|high|xhigh|max`).
+- **Requirements**: Claude Code ≥ 2.1.248 on `PATH` (declared in `deploy.py` as the
+  `claude-code` cask) and a `claude auth login`. Local only — skipped in remote workspaces.
+- **One-time connect**: `/connect` → Claude Agent, or
+  `opencode auth login claude-agent --method claude-login`. That records the choice in
+  `auth.json`; the login itself stays with `claude`.
+- **Config is optional**: `providers.claude-agent.settings` / `headers` / `body` exist only
+  for gateways (`baseURL` → `ANTHROPIC_BASE_URL`, `apiKey`, `authToken`, timeouts).
+  `OPENCODE_CLAUDE_PATH` selects a non-PATH `claude`.
+- **Not read**: `~/.claude` settings, `CLAUDE.md`, hooks, MCP servers and skills. Rules
+  come from `AGENTS.md`; nothing Claude-Code-side should be relied on.
+- **Legacy**: the pre-2.2.3 `@khalilgharbaoui/opencode-claude-code-plugin` (and
+  openchamber's archived `opencode-claude`) is superseded. `deploy.py` Section 8 removes
+  its cache and state; the casks stay because the native provider needs them.
+- **Troubleshooting**: "If the `claude-agent` provider dies" in `files/opencode_agents.md`
+  (missing/outdated `claude`, `OPENCODE_CLAUDE_PATH`, cask-doctor).
 
 ## Skills lifecycle
 

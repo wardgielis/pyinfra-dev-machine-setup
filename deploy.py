@@ -83,10 +83,10 @@ for _tap in TAPS:
 PERSONAL_CASKS = [
     "league-of-legends",  # Games
     "claude",             # Anthropic desktop app
-    # Hard dependency of opencode's `claude-code` provider — NOT an experiment.
-    # The plugin resolves `claude` from PATH with no fallback, so losing this
-    # cask kills the provider outright. Keep it declared so Section 7's
-    # `brew bundle cleanup` never treats it as drift.
+    # Hard dependency of opencode's built-in `claude-agent` provider (2.2.3+) —
+    # NOT an experiment. The provider starts `claude` from PATH with no bundled
+    # fallback, so losing this cask kills Claude models outright. Keep it
+    # declared so Section 7's `brew bundle cleanup` never treats it as drift.
     "claude-code",        # Anthropic Claude Code CLI
     "brave-browser",      # Privacy-focused browser
     "spotify",            # Music streaming
@@ -471,6 +471,20 @@ files.sync(
     dest=os.path.expanduser("~/.config/opencode/plugins/skill-freshness"),
     delete=True,
 )
+
+# opencode 2.2.3 replaced the `@khalilgharbaoui/opencode-claude-code-plugin`
+# with the built-in `claude-agent` provider. Remove the plugin's package cache
+# and its Claude-session mapping so machines that used it converge cleanly.
+# The `claude` / `claude-code` casks stay: the native provider needs them.
+for _legacy_claude_data in (
+    "~/.cache/opencode/npm/@khalilgharbaoui",
+    "~/.local/state/opencode-claude-code-plugin",
+):
+    files.directory(
+        name=f"Remove legacy Claude Code plugin data ({_legacy_claude_data})",
+        path=os.path.expanduser(_legacy_claude_data),
+        present=False,
+    )
 
 
 # ============================================================

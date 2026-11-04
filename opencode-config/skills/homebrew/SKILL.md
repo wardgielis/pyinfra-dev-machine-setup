@@ -687,7 +687,7 @@ brew list --cask --versions <cask>          # errors
 brew info --cask <cask>                    # "Not installed"
 ```
 
-Downstream effects: the binary is gone from `/opt/homebrew/bin`, so anything resolving it from PATH dies (opencode's `claude-code` provider throws `Could not resolve command on PATH: claude`), and pyinfra aborts before Section 2 because the `BrewCasks` fact raises.
+Downstream effects: the binary is gone from `/opt/homebrew/bin`, so anything resolving it from PATH dies (opencode's `claude-agent` provider throws `Could not resolve command on PATH: claude`), and pyinfra aborts before Section 2 because the `BrewCasks` fact raises.
 
 **Detect every broken cask at once** — cheap, read-only:
 

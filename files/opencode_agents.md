@@ -103,15 +103,27 @@ connections). Prefer it over shell tooling when IDE-accurate answers matter.
 Full tool map, pre-flight checks, index-lag discipline and troubleshooting: load the
 **[[pycharm]]** skill.
 
-## If the `claude-code` provider dies
+## If the `claude-agent` provider dies
 
-Symptom: a `claude-code` session or subagent fails immediately with
-`Could not resolve command on PATH: claude`, or `claude` simply isn't on PATH. The plugin
-resolves `claude` from PATH with **no bundled fallback**, so a missing binary takes the
-whole provider down.
+Claude models run through opencode's built-in **Claude Agent** provider (`claude-agent`,
+opencode 2.2.3+). There is no plugin: opencode starts the installed `claude` CLI through
+the official Claude Agent SDK. It resolves `claude` from `PATH` with **no bundled
+fallback**, so a missing or outdated binary takes the whole provider down.
 
-Cause: an interrupted `brew upgrade`. Homebrew removes a cask's version directory before
-staging the new one, so a killed or failed upgrade leaves
+Symptoms and fixes:
+
+- `No items available` in the model picker / no `claude-agent/*` models → run
+  `opencode auth login claude-agent --method claude-login` (or `/connect` → Claude Agent),
+  then `claude auth status` (expect `loggedIn: true`).
+- `Claude Code … is too old; 2.1.248 or later is required` → `brew upgrade --cask claude-code`.
+- `Could not resolve command on PATH: claude` → the cask is broken or off `PATH`; see below.
+  To use another copy, set `OPENCODE_CLAUDE_PATH` on the server
+  (`opencode service set env OPENCODE_CLAUDE_PATH /opt/claude/bin/claude`).
+- Claude Code is signed in but requests fail → check `claude auth status`; the provider
+  inherits whatever that CLI holds (plan, API key, Bedrock, Vertex).
+
+Cause of a missing binary: an interrupted `brew upgrade`. Homebrew removes a cask's
+version directory before staging the new one, so a killed or failed upgrade leaves
 `/opt/homebrew/Caskroom/claude-code/` holding only `.metadata/` — no binary, no version
 dir. `brew list --cask` still lists the cask while `brew info --cask` says "Not installed".
 The same state makes every pyinfra run abort at Section 2 (`BrewCasks` fact).
@@ -126,6 +138,10 @@ It is idempotent and no-ops on a healthy machine, and `deploy.py` runs it at loa
 every deploy. If you repair manually, use `brew uninstall --cask <name> --force` then
 `brew install --cask <name>` — **never `--zap`**, which deletes `~/.claude.json` and the
 CLI credentials and forces a fresh login. Details: the **[[homebrew]]** skill.
+
+Claude Agent is local-only: it is skipped in remote workspaces. It also deliberately does
+not read `~/.claude` settings, `CLAUDE.md`, hooks, MCP servers or skills — opencode's own
+`AGENTS.md`, skills, MCP servers and permissions are what apply.
 
 ## Keeping AGENTS.md up to date
 
