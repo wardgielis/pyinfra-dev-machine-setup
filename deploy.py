@@ -422,6 +422,12 @@ for _ch_var in (
 ):
     os.environ.setdefault(_ch_var, "")
 
+# Grafana MCP server (grafana/mcp-grafana, run via `uvx mcp-grafana`). The URL defaults to the
+# analytics instance; the service account token has no default and must be set in .env
+# (Viewer role is enough, the server runs with --disable-write). Blank token = inert server.
+os.environ.setdefault("GRAFANA_URL", "https://<grafana-instance>")
+os.environ.setdefault("GRAFANA_SERVICE_ACCOUNT_TOKEN", "")
+
 files.directory(
     name="Ensure ~/.config/opencode exists",
     path=os.path.expanduser("~/.config/opencode"),
@@ -446,6 +452,8 @@ _deploy_template(
         "CLICKHOUSE_DEV_PASSWORD",
         "CLICKHOUSE_PROD_USER",
         "CLICKHOUSE_PROD_PASSWORD",
+        "GRAFANA_URL",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN",
     ],
 )
 

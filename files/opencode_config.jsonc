@@ -39,6 +39,14 @@
           "CLICKHOUSE_SECURE": "false"
         }
       },
+      "grafana": {
+        "type": "local",
+        "command": ["uvx", "mcp-grafana", "--disable-write"],
+        "environment": {
+          "GRAFANA_URL": "${GRAFANA_URL}",
+          "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${GRAFANA_SERVICE_ACCOUNT_TOKEN}"
+        }
+      },
       "atlassian": { "type": "remote", "url": "https://mcp.atlassian.com/v2/mcp" },
       "gitlab": { "type": "remote", "url": "https://gitlab.com/api/v4/mcp" },
       "opentofu": { "type": "remote", "url": "https://mcp.opentofu.org/mcp" },
