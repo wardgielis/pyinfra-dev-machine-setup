@@ -422,10 +422,10 @@ for _ch_var in (
 ):
     os.environ.setdefault(_ch_var, "")
 
-# Grafana MCP server (grafana/mcp-grafana, run via `uvx mcp-grafana`). The URL defaults to the
-# analytics instance; the service account token has no default and must be set in .env
-# (Viewer role is enough, the server runs with --disable-write). Blank token = inert server.
-os.environ.setdefault("GRAFANA_URL", "https://<grafana-instance>")
+# Grafana MCP server (grafana/mcp-grafana, run via `uvx mcp-grafana`). Set the instance URL and
+# a service account token (Viewer role is enough, the server runs with --disable-write) in .env.
+# Blank values mean the server is wired but inert.
+os.environ.setdefault("GRAFANA_URL", "")
 os.environ.setdefault("GRAFANA_SERVICE_ACCOUNT_TOKEN", "")
 
 files.directory(
