@@ -1,0 +1,29 @@
+{
+  "skill_name": "caveman",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "should i delete the aws mcp? opencode mcp list says: aws failed: Invalid request parameters. config entry is uvx mcp-proxy-for-aws@latest https://aws-mcp.us-east-1.api.aws/mcp --region eu-west-1",
+      "expected_output": "Short verdict first, one likely reason, one next step. 6 lines or fewer, no pros and cons lists.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "my pyinfra deploy aborts in section 2 on the BrewCasks fact. brew list --cask still shows claude-code but brew info --cask says Not installed. why and what do i do?",
+      "expected_output": "Cause (interrupted brew upgrade left an empty Caskroom dir) and the fix (cask-doctor script) in 6 lines or fewer. Must not suggest --zap.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "whats the difference between uvx and uv run?",
+      "expected_output": "Two or three short lines contrasting them. No headings, no long list.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "can you explain to me in detail how our opencode setup works: how config, plugins, AGENTS.md and skills get from the pyinfra repo to the machine and when they are loaded?",
+      "expected_output": "A longer explanation in full sentences with short sections. Caveman compression must NOT apply here.",
+      "files": []
+    }
+  ]
+}
