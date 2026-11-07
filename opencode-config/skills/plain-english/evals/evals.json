@@ -1,0 +1,41 @@
+{
+  "skill_name": "plain-english",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Write a Google style docstring for this function: def retry(fn, times=3, wait=2): it calls fn, and if it raises an exception it sleeps for wait seconds and tries again, up to times attempts, then re-raises the last exception. Return only the function with the docstring.",
+      "expected_output": "Short docstring, simple words, no backticks, no em dashes.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Write a commit message and a short merge request description for a change that makes our nightly airflow DAG skip empty parquet files instead of crashing, so downstream tables are not broken.",
+      "expected_output": "Imperative subject under 50 chars, plain words, no backticks or dashes, What/Why/How to test.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Rewrite these comments to be clearer: '# leverage pandas under the hood to facilitate the ingestion -- ofc this is a hack, don't judge!' and '# TODO: gracefully deal with edge cases ASAP'. Give me the rewritten comments only.",
+      "expected_output": "Plain words, no idioms, no dashes or backticks, TODO has a reason.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Write the Usage section of a README for a small Python CLI called csvclean that removes empty rows from a CSV file. Options: --input PATH, --output PATH, --keep-header (default on). Include one example command.",
+      "expected_output": "Short sentences, numbered steps, no backticks, plain words, example in a code block.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Please review and rewrite this merge request text so my colleagues can read it easily: 'This MR leverages the new retry decorator in order to gracefully handle transient failures -- basically a no-brainer; we also kicked off a refactor of the loader (wip!!) and deprecated the legacy path => will be removed prior to the next release.'",
+      "expected_output": "Plain rewrite, no dashes, arrows, backticks, idioms, exclamation marks or semicolons.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Write a Google style docstring for: def sync_table(source, target, mode='append', batch_size=10000, dry_run=False). It copies rows from a source table to a target table in batches. mode can be append or overwrite. With dry_run it only counts rows and writes nothing. It raises ValueError for an unknown mode. It returns the number of rows copied. Return only the function signature and docstring.",
+      "expected_output": "Documents all 5 args, short first line, no backticks or dashes.",
+      "files": []
+    }
+  ]
+}

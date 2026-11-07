@@ -75,5 +75,12 @@
       }
     }
   },
-  "skills": ["${OPENCODE_SKILLS_PATH}"]
+  "skills": ["${OPENCODE_SKILLS_PATH}"],
+  // Always in the system prompt, so neither skill depends on the agent loading it.
+  // Caveman sets the voice of chat replies. Plain-english sets the voice of everything
+  // written to files or shared: code, docstrings, comments, commits, MR text, docs.
+  "instructions": [
+    "${OPENCODE_SKILLS_PATH}/caveman/SKILL.md",
+    "${OPENCODE_SKILLS_PATH}/plain-english/SKILL.md"
+  ]
 }

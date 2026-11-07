@@ -1,0 +1,22 @@
+[
+ {"query": "can you add docstrings to all functions in src/loader.py, my team reads english as a second language", "should_trigger": true},
+ {"query": "write a commit message for the change i just made to the airflow retry logic", "should_trigger": true},
+ {"query": "draft the MR description for my branch fix/empty-parquet, short pls", "should_trigger": true},
+ {"query": "my readme for the csvclean tool is a mess, can u rewrite the install and usage part", "should_trigger": true},
+ {"query": "review the comments in deploy.py, some of them are confusing for the new people from the data team", "should_trigger": true},
+ {"query": "write the changelog entry for release 1.4, we added a retry flag and removed the old v1 endpoint", "should_trigger": true},
+ {"query": "open a jira issue text for the flaky nightly dag, explain steps to reproduce", "should_trigger": true},
+ {"query": "rewrite this paragraph so a non native speaker understands it: 'Leveraging the aforementioned abstraction facilitates seamless ingestion'", "should_trigger": true},
+ {"query": "document the pyinfra deploy sections in a short docs page for the team wiki", "should_trigger": true},
+ {"query": "add a short comment above this regex that explains what it matches", "should_trigger": true},
+ {"query": "fix the failing pytest in tests/test_loader.py, it errors on an empty dataframe", "should_trigger": false},
+ {"query": "translate this readme from dutch to english: 'Dit script verwijdert lege rijen'", "should_trigger": false},
+ {"query": "write a polars query that returns the top 5 customers by revenue from sales.parquet", "should_trigger": false},
+ {"query": "explain how kubernetes network policies work", "should_trigger": false},
+ {"query": "rename the variable df2 to cleaned_orders everywhere in the notebook", "should_trigger": false},
+ {"query": "write a poem about spring in the style of shakespeare", "should_trigger": false},
+ {"query": "generate the opentofu module for an s3 bucket with versioning", "should_trigger": false},
+ {"query": "spell check my cover letter for a data engineer job and make it sound formal and impressive", "should_trigger": false},
+ {"query": "what does the git rebase --onto option do", "should_trigger": false},
+ {"query": "write a sql query joining orders and customers and counting orders per customer", "should_trigger": false}
+]
