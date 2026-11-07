@@ -2,7 +2,7 @@
 name: opencode
 description: Use when editing or managing opencode in this repo — configuration (files/opencode_config.jsonc), plugins (opencode-config/plugins/), AGENTS.md (files/opencode_agents.md), or skills (opencode-config/skills/). Covers the repo-to-live file map, the repo-first editing rule, deploy.py Section 8 sync, and the skill authoring workflow (frontmatter, naming, lifecycle, size, vendoring, validation). For generic opencode configuration (schema, agents, permissions, MCP, plugin API) use the upstream docs.
 metadata:
-  review_after: "2026-11-19"
+  review_after: "2026-12-07"
   docs_url: "https://opencode.ai/docs/skills/"
 ---
 
@@ -72,8 +72,11 @@ skills, MCP servers and compaction.
 
 ### Where skills live (single source of truth)
 
-- **Repo path**: `opencode-config/skills/<name>/SKILL.md` — the ONLY location opencode reads skills from.
-- **`~/.config/opencode/skills` is deprecated** — deploy.py removes it (`files.directory present=False`); duplicate names across locations resolve nondeterministically. Never put skills there.
+- **Repo path**: `opencode-config/skills/<name>/SKILL.md` — the only location we author skills in. It is registered through the config `skills` array, which has the highest precedence.
+- **opencode reads more than that.** V2 also discovers `~/.claude/skills` and `~/.agents/skills` (global compatibility sources, lowest precedence), `~/.config/opencode/skills`, and project `.opencode/skills` / `.claude/skills` / `.agents/skills`. Claude Desktop syncs skills into `~/.claude/skills/synced/`, so they show up in `<available_skills>` too.
+- **Duplicate IDs are deterministic, not random**: the source registered later wins, so a repo skill overrides a same-ID skill from `~/.claude/skills`. Keep IDs unique anyway, to avoid surprises.
+- **Hide skills you do not want** with `skill.use` deny policies in `files/opencode_config.jsonc` (action `skill.use`; the older `skill` action name is rejected by the schema). Claude-app-only skills (browser panes, computer use, Docs and Drive connectors, memory import) are denied there.
+- **`~/.config/opencode/skills` is deprecated** — deploy.py removes it (`files.directory present=False`). Never put skills there.
 
 ### Creating or updating a skill
 
@@ -109,7 +112,7 @@ When a skill is copied from an upstream project (e.g. the official Polars skill)
 - every file under `opencode-config/skills/`, never under `~/.config/opencode/skills`
 - code fences balanced; every cross-link to another skill points to an existing skill directory
 - examples executed against the installed versions, including each example patched in a vendored skill
-- three realistic sample prompts run through the skill and the output checked against it
+- three realistic sample prompts run through the skill and the output checked against it; for a rigorous version (baseline comparison, assertions, benchmark, review viewer, description tuning) use [[skill-creator]], and run its `scripts/quick_validate.py`, which automates the checks above
 
 ## Reloading
 

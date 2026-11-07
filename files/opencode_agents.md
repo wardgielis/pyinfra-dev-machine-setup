@@ -63,7 +63,13 @@ This prevents repeating mistakes and ensures you work from the most accurate, pr
 
 Follow the repo's skill-authoring workflow: write skills to
 `~/pyinfra-dev-machine-setup/opencode-config/skills/<name>/SKILL.md` and follow the
-naming/frontmatter/validation rules. Full procedure: load the **[[opencode]]** skill.
+naming/frontmatter/validation rules. Full procedure: load the **[[opencode]]** skill. To test
+and iterate on a skill (test prompts, baseline comparison, benchmark, review viewer, description
+tuning), load the **[[skill-creator]]** skill as well.
+
+`~/.claude/skills` is also a discovery source (lower precedence than the repo), so Claude
+Desktop's synced skills appear in the list. Those that need Claude app tools are denied in
+`files/opencode_config.jsonc` (`skill.use` policies); do not rely on them.
 
 ## Editing OpenCode config, plugins, or AGENTS.md
 
