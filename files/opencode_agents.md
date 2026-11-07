@@ -25,7 +25,7 @@ At the start of every session, in your FIRST response:
 3. **Read relevant skills** using the `Read` tool at the `<location>` path — read COMPLETE content
    - Not just summaries or descriptions — read the full skill content
    - Example: before recommending pyinfra changes, Read the pyinfra SKILL.md fully
-4. **Tell the user** which skills you loaded, why, and what they say
+4. **Tell the user** which skills you loaded, in one line (names only, no summary of their content)
 
 Do this proactively at session start — not reactively when asked.
 
@@ -43,6 +43,8 @@ Some skills cover a whole class of work rather than one named tool. Load them as
 - **[[python]]** — Python code, tests, or project config (`pyproject.toml`, `uv.lock`, pytest), including a one-line fix or a review comment.
 - **[[polars]]** — single-machine tabular data (CSV, Parquet, NDJSON, DataFrames), including questions phrased as "which/top/how many".
 - **[[spark]]** — PySpark, Delta Lake, or Databricks work; use it instead of [[polars]] for distributed data.
+- **[[plain-english]]** — always on for anything written to a file or shared: code, comments, docstrings, READMEs, commit messages, MR descriptions. Simple words, no backticks, no em dashes. Not for chat replies, which use [[caveman]].
+- **[[caveman]]** — always on for chat replies: terse, answer first, no filler. Not for code, docstrings, comments, commit or MR text, or detailed architecture and process explanations. Those use full sentences under [[plain-english]]. Off only when the user says "stop caveman" or "normal mode".
 
 The topic-specific skill still wins; these only set the baseline.
 
