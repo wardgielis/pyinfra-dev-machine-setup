@@ -16,7 +16,7 @@ Goal: write text that a non-native English reader understands on the first read.
 1. **Use short sentences.** Aim for 15 to 20 words. If a sentence has two ideas, split it in two.
 2. **Use common words.** Choose the simple word. See the word list below.
 3. **Use the active voice.** Say who does what. Write "The function reads the file", not "The file is read by the function".
-4. **Use the present tense.** Write "Returns the user", not "Will return the user".
+4. **Use the present tense.** Write "Returns the user", not "Will return the user". The one exception is the summary line of a docstring, which uses the imperative mood ("Return the user"). See Docstrings.
 5. **Put the main point first.** Start with what the code does. Add details after.
 6. **Use one word for one idea.** If you say "folder" once, do not say "directory" or "path" later for the same thing. Pick one term and keep it.
 7. **Avoid idioms and slang.** Phrases like "out of the box", "under the hood", "a no brainer", "bite the bullet" or "ballpark" are hard to translate. Say the plain meaning.
@@ -30,7 +30,7 @@ Many special characters make text hard to read and hard to search. They also bre
 
 - **No backticks.** Do not wrap names in backticks inside comments, docstrings, commit messages or MR text. Write the name as plain text. Example: "Pass the user_id to the function."
 - **No em dashes and no en dashes.** Use a period, a comma, or brackets instead. Split the sentence if needed.
-- **No arrows** such as the ones made from -> or =>, and no unicode symbols.
+- **No arrows in prose.** Write "to" instead, for example "from the file to the table". The `->` arrow is allowed in code, such as type hints, as the python skill says. No unicode symbols.
 - **No emoji.**
 - **No fancy quotes.** Use plain straight quotes, and only when really needed.
 - **Avoid semicolons.** Use two sentences.
@@ -38,7 +38,7 @@ Many special characters make text hard to read and hard to search. They also bre
 - **Avoid slashes for "or" and "and".** Write "read or write", not "read/write".
 - **Avoid bold, italics and long lists inside code comments and docstrings.** Plain text is enough there.
 
-Exception: if a tool needs a special format (for example Markdown headings in a README, or a code block in an example), use only the minimum the format needs. Code examples in documentation still use code blocks.
+Exception: if a tool needs a special format (for example Markdown headings in a README), use only the minimum the format needs. Code blocks belong in README and docs pages. Docstrings never use code blocks or backticks, so write examples there as indented plain text (see the python skill).
 
 ## Word list
 
@@ -80,7 +80,7 @@ Exception: if a tool needs a special format (for example Markdown headings in a 
 
 Follow the Google layout from the python skill. Use these word rules on top:
 
-- The first line is one short sentence. It starts with a verb in the present tense: "Return", "Read", "Check", "Build". Use the same form as the surrounding code.
+- The first line is one short sentence. It starts with an imperative verb, as the python skill says: "Return", "Read", "Check", "Build". Use the same form as the surrounding code.
 - Say what the function does and why it exists. Do not repeat the code line by line.
 - Describe each argument in a short phrase. Add the unit or the allowed values if it matters (for example "in seconds").
 - Say when it raises an error, and which error.
@@ -112,7 +112,7 @@ def read_rows(path):
 - Explain why, not what. The code already shows what.
 - Keep them short. One line is best.
 - Update or delete a comment when the code changes.
-- Write a TODO as a full sentence with a reason: "TODO: Remove this when the API v1 is turned off."
+- Write a TODO as `# TODO(owner): reason`, with the reason as a full sentence. Example: "# TODO(data-team): Remove this when the API v1 is turned off." The python skill sets this format.
 
 Before:
 

@@ -207,6 +207,8 @@ def total_amount(orders: Iterable[Order]) -> float:
 
 Write a docstring for every public module, class, and function. Write one for a private helper when its purpose is not obvious.
 
+Exceptions: run entry points (`run_*.py`) need no module docstring and no docstring on `run()`, because the DAG or caller documents them. Test functions and fixtures need no docstrings. A repository's AGENTS.md can set stricter or looser rules, and it wins.
+
 Use Google style, but keep it compact. The docstring should help a reader use the code, not repeat the code.
 
 Rules:
@@ -218,6 +220,8 @@ Rules:
 - Do not restate the signature or narrate obvious steps.
 - Use short, plain English sentences.
 - **Do not use backticks anywhere inside a docstring.** No Markdown, no Sphinx roles, no `:param:`. Write names plainly.
+- **No fenced code blocks in a docstring.** Write an example as indented plain text under an "Example:" line. Code blocks belong in README and docs pages.
+- **No Sphinx-style or ASCII tables in a docstring.** Describe the fields in plain sentences, or leave them out. Do not keep a column table below a class.
 - Keep the description to a few lines. If a function needs a page of explanation, split it or write a design note.
 - Describe why, constraints, side effects, and surprising behaviour. Those are the parts a reader cannot get from the code.
 - Module docstrings: one to three sentences on what the module is for.
@@ -263,7 +267,8 @@ Comments explain why. The code already explains what.
 - **Never delete an existing comment just because it looks redundant.** If the code it describes is still there, keep it. If it is stale, update it in the same change. If you are unsure, keep it and mention it.
 - **Do not add comments that describe the old implementation.** Do not write "this used to be X" or "the old version did Y". The one exception is an active POC or migration where both paths exist and the comparison helps a reviewer. Remove those notes when the migration ends.
 - Do not keep commented-out code. Git remembers it.
-- Use `# TODO(owner): reason` for deferred work. Name the owner when you know it.
+- Use `# TODO(owner): reason` for deferred work. Name the owner when you know it. The reason is a full sentence.
+- In comments and docstrings, write "to" instead of an arrow. The `->` arrow stays in code, such as type hints and snippets.
 
 Every regular expression gets one comment line directly above it that says what it matches. Add an example if that helps.
 
