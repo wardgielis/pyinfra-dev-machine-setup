@@ -2,7 +2,7 @@
 name: python
 description: Use when writing, reviewing, refactoring, debugging, or testing Python code, or when setting up a Python project. Covers PEP 8 and PEP 257, Google-style docstrings, comments and regex explanations, naming (functions are verbs), type hints, pytest, uv, pyproject.toml, and ruff. Also use when the user asks about Python style, project layout, or code quality. Treat any change to a .py file, pyproject.toml, or test configuration as Python work, even a one-line fix or a review comment. For PySpark work read [[spark]]; for Polars read [[polars]].
 metadata:
-  review_after: "2026-11-19"
+  review_after: "2026-12-09"
   docs_url: "https://peps.python.org/pep-0008/"
   version_pinned: "3.12+"
 ---
@@ -285,6 +285,7 @@ Do not explain every token. One line is enough. If the pattern is genuinely comp
 ## Functions and modules
 
 - One job per function. If the name needs "and", split it.
+- Do not wrap a one-liner in a function when only one place uses it. Keep the line in the main code. Create a function only for substantial logic that is reused. Splitting a long function does not need a helper for each line.
 - Aim for 70 lines per function and 300 lines per module. Treat these as smoke alarms, not laws.
 - Prefer early returns over deep nesting.
 - Keep functions pure where you can. Pass dependencies in instead of reaching for globals.
@@ -382,6 +383,7 @@ Add `pip-audit` if dependency security scanning is wanted. Keep the lockfile in 
 - [ ] No docstring contains backticks.
 - [ ] Function names are verbs; predicates read as questions.
 - [ ] Simple accumulator loops are comprehensions; complex ones are still loops.
+- [ ] No single-use functions that only wrap one line.
 - [ ] Conditional expressions choose a value, not an action.
 - [ ] Every regex has a one-line comment that says what it matches.
 - [ ] Existing comments are preserved, and stale ones are updated.
