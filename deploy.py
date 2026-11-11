@@ -118,6 +118,9 @@ GUI_CASKS = [
     # Opensource macos cleanup tool
     "puremac",
 
+    # VPN client for the homelab server (tailnet)
+    "tailscale-app",
+
     # Communication tools
     "mattermost",
     "whatsapp",
