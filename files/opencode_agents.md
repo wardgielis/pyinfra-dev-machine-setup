@@ -73,8 +73,17 @@ tuning), load the **[[skill-creator]]** skill as well.
 Desktop's synced skills appear in the list. Those that need Claude app tools are denied in
 `files/opencode_config.jsonc` (`skill.use` policies); do not rely on them.
 
-## Editing OpenCode config, plugins, or AGENTS.md
+## The homelab server lives in the same repo
 
+`homelab/` manages the briareus mini PC. It is a second pyinfra target with its
+own inventory, deploy and task modules. Run it from inside `homelab/`. Read
+`homelab/AGENTS.md` before changing anything there.
+
+The OpenCode config is shared: one template, rendered per target by
+`scripts/opencode_config.py`. A change to policies or instructions reaches both
+the laptop and the server, so test both variants with `bash scripts/ci.sh`.
+
+## Editing OpenCode config, plugins, or AGENTS.md
 OpenCode assets are managed in the repo, not in `~/.config/opencode`:
 
 - Config → `files/opencode_config.jsonc` (deployed as `~/.config/opencode/opencode.jsonc`)

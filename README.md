@@ -65,3 +65,23 @@ uv run pyinfra @local deploy.py
 ## Customizing
 
 All managed packages are defined as named lists at the top of `deploy.py` — that same list drives both installation and drift cleanup, so there's a single source of truth. Add/remove packages there, drop config templates into `files/`, and re-run the deploy.
+
+## Homelab server
+
+`homelab/` manages a second machine, the briareus mini PC, from the same
+repository. It is a separate pyinfra entry point:
+
+```sh
+cd homelab
+uv run pyinfra inventory.py deploy.py
+```
+
+The server runs OpenCode and Claude Code as an always-on agent, plus (after v2)
+a small k3s cluster. Read `homelab/README.md` before you touch it, and
+`homelab/docs/bootstrap.md` before the first run.
+
+The OpenCode config is shared: `files/opencode_config.jsonc` is one template, and
+`scripts/opencode_config.py` renders it for the laptop and for the server. Only
+the MCP block and the skills path differ. Run `bash scripts/ci.sh` before a push;
+it checks for secrets, compiles the Python, compares both rendered variants and
+resolves the homelab inventory.

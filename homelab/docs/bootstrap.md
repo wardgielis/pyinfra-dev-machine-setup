@@ -81,7 +81,8 @@ If the provider is not offered over `--server`, the Claude Code job becomes a
 plain `claude` session in tmux started by `systemd-run` with the same sandbox
 properties. Record the outcome here.
 
-Outcome: not tested yet.
+Outcome: not tested yet. The service is installed and answers on the loopback
+API. The claude models still need `claude auth login` as the agent user.
 
 ### Checks after phase tailscale
 

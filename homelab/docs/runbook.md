@@ -44,7 +44,7 @@ start. Record the version below.
 
 | Date | Version |
 |---|---|
-| 2026-11-11 | see `brew list --cask --versions claude-code` |
+| 2026-11-11 | 2.1.311 |
 
 Never run `brew uninstall --cask --zap claude-code`. It deletes the login.
 
@@ -110,6 +110,11 @@ or run the fixes by hand. A broken cluster must never take the agent down.
   does not get it.
 - pyinfra connects with paramiko, which cannot resolve briareus.local (mDNS
   returns only link-local IPv6). Use the LAN IP, then the tailnet name.
+- pyinfra also needs the Bitwarden SSH agent to be unlocked and to approve the
+  request. When it is not, the connection fails with No existing session from
+  paramiko while plain ssh still works. A deploy key on disk would remove this.
+- The Healthchecks probe uses /api/config. /api/hello returns 404 in OpenCode
+  2.2.7. Check the route after an OpenCode upgrade.
 
 ## Manual steps for a rebuild of the agent
 
