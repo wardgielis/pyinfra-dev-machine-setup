@@ -37,7 +37,11 @@ rsync -a --delete --exclude 'pycharm/' "$SKILLS_SRC/" "$SKILLS_DEST/"
 
 _tmp=$(mktemp)
 trap 'rm -f "$_tmp"' EXIT
-python3 "$REPO/scripts/opencode_config.py" --target server --out "$_tmp"
+
+if ! python3 "$REPO/scripts/opencode_config.py" --target server --out "$_tmp"; then
+    notify_fail "config render failed"
+    exit 1
+fi
 
 if ! cmp -s "$_tmp" "$CONFIG"; then
     install -m 0644 -o root -g root "$_tmp" "$CONFIG"
