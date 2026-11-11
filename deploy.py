@@ -7,6 +7,11 @@ import subprocess
 import sys
 from pyinfra.operations import brew, files, python, server
 
+# The config renderer is shared with the homelab deploy: one template, two
+# targets, so a change on the laptop cannot miss the server.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "scripts"))
+from opencode_config import render as _render_opencode_config  # noqa: E402
+
 
 def _deploy_template(dest, template_name, varnames, mode=None):
     missing = [v for v in varnames if v not in os.environ]
@@ -441,21 +446,10 @@ files.directory(
     present=False,
 )
 
-_deploy_template(
-    "~/.config/opencode/opencode.jsonc",
-    "opencode_config.jsonc",
-    [
-        "OPENCODE_SKILLS_PATH",
-        "PYCHARM_MCP_URL",
-        "ARGOCD_BASE_URL",
-        "ARGOCD_API_TOKEN",
-        "CLICKHOUSE_DEV_USER",
-        "CLICKHOUSE_DEV_PASSWORD",
-        "CLICKHOUSE_PROD_USER",
-        "CLICKHOUSE_PROD_PASSWORD",
-        "GRAFANA_URL",
-        "GRAFANA_SERVICE_ACCOUNT_TOKEN",
-    ],
+files.put(
+    name="Sync OpenCode config",
+    src=io.StringIO(_render_opencode_config("laptop")),
+    dest=os.path.expanduser("~/.config/opencode/opencode.jsonc"),
 )
 
 files.put(

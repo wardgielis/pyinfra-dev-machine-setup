@@ -14,66 +14,7 @@
     { "action": "skill.use", "resource": "morning", "effect": "deny" }
   ],
   "mcp": {
-    "servers": {
-      "pycharm": { "type": "remote", "url": "${PYCHARM_MCP_URL}" },
-      "homebrew": { "type": "local", "command": ["brew", "mcp-server"] },
-      "argocd": {
-        "type": "local",
-        "command": ["npx", "-y", "argocd-mcp", "stdio"],
-        "environment": {
-          "ARGOCD_BASE_URL": "${ARGOCD_BASE_URL}",
-          "ARGOCD_API_TOKEN": "${ARGOCD_API_TOKEN}"
-        }
-      },
-      "clickhouse_development": {
-        "type": "local",
-        "command": ["uvx", "mcp-clickhouse"],
-        "environment": {
-          "CLICKHOUSE_HOST": "tools-development-clickhouse.hosts.naturalis.io",
-          "CLICKHOUSE_PORT": "8123",
-          "CLICKHOUSE_USER": "${CLICKHOUSE_DEV_USER}",
-          "CLICKHOUSE_PASSWORD": "${CLICKHOUSE_DEV_PASSWORD}",
-          "CLICKHOUSE_SECURE": "false",
-          "CLICKHOUSE_ALLOW_WRITE_ACCESS": "true",
-          "CLICKHOUSE_ALLOW_DROP": "true"
-        }
-      },
-      "clickhouse_production": {
-        "type": "local",
-        "command": ["uvx", "mcp-clickhouse"],
-        "environment": {
-          "CLICKHOUSE_HOST": "tools-production-clickhouse.hosts.naturalis.io",
-          "CLICKHOUSE_PORT": "8123",
-          "CLICKHOUSE_USER": "${CLICKHOUSE_PROD_USER}",
-          "CLICKHOUSE_PASSWORD": "${CLICKHOUSE_PROD_PASSWORD}",
-          "CLICKHOUSE_SECURE": "false"
-        }
-      },
-      "grafana": {
-        "type": "local",
-        "command": ["uvx", "mcp-grafana"],
-        "environment": {
-          "GRAFANA_URL": "${GRAFANA_URL}",
-          "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${GRAFANA_SERVICE_ACCOUNT_TOKEN}"
-        }
-      },
-      "atlassian": { "type": "remote", "url": "https://mcp.atlassian.com/v2/mcp" },
-      "gitlab": { "type": "remote", "url": "https://gitlab.com/api/v4/mcp" },
-      "opentofu": { "type": "remote", "url": "https://mcp.opentofu.org/mcp" },
-      "aws": {
-        "type": "local",
-        "command": ["uvx", "mcp-proxy-for-aws@latest", "https://aws-mcp.us-east-1.api.aws/mcp", "--region", "eu-west-1"]
-      },
-      "databricks": {
-        "type": "local",
-        "command": [
-          "uvx", "uc-mcp-proxy",
-          "--url", "https://dbc-03ed8bbb-c0ec.cloud.databricks.com/api/2.0/mcp/sql",
-          "--auth-type", "databricks-cli",
-          "--profile", "development"
-        ]
-      }
-    }
+    "servers": ${OPENCODE_MCP_SERVERS}
   },
   "skills": ["${OPENCODE_SKILLS_PATH}"],
   // Always in the system prompt, so neither skill depends on the agent loading it.

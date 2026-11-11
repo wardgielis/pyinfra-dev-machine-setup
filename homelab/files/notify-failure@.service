@@ -1,0 +1,6 @@
+[Unit]
+Description=Report a failure of %i to Healthchecks.io
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/homelab-notify "unit failed: %i"

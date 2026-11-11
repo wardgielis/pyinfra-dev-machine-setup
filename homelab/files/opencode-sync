@@ -1,0 +1,54 @@
+#!/bin/sh
+# Pull the homelab repository and sync the OpenCode config and skills.
+#
+# Runs as root from opencode-sync.timer. It never restarts the OpenCode unit: a
+# restart kills the running session, so the restart stays a human decision.
+set -eu
+
+REPO=/srv/opencode-src
+SKILLS_SRC="$REPO/opencode-config/skills"
+SKILLS_DEST=/opt/opencode-skills
+CONFIG=/etc/opencode/opencode.jsonc
+MARKER=/run/opencode-config-pending
+
+notify_fail() {
+    /usr/local/bin/homelab-notify "opencode-sync: $1"
+}
+
+if [ -n "$(git -C "$REPO" status --porcelain)" ]; then
+    notify_fail "dirty tree in $REPO"
+    echo "dirty tree in $REPO" >&2
+    exit 1
+fi
+
+if ! git -C "$REPO" fetch --quiet origin main; then
+    notify_fail "fetch failed"
+    exit 1
+fi
+
+if ! git -C "$REPO" pull --ff-only --quiet origin main; then
+    notify_fail "pull was not a fast-forward"
+    exit 1
+fi
+
+# The clone only holds tracked files, so the gitignored org skills can never
+# arrive this way. pycharm needs the IDE MCP server, so skip it.
+rsync -a --delete --exclude 'pycharm/' "$SKILLS_SRC/" "$SKILLS_DEST/"
+
+_tmp=$(mktemp)
+trap 'rm -f "$_tmp"' EXIT
+python3 "$REPO/scripts/opencode_config.py" --target server --out "$_tmp"
+
+if ! cmp -s "$_tmp" "$CONFIG"; then
+    install -m 0644 -o root -g root "$_tmp" "$CONFIG"
+    touch "$MARKER"
+    logger -t opencode-sync "config differs from git, restart the service to apply"
+fi
+
+# One journal line per skill whose review date has passed.
+python3 "$REPO/scripts/opencode_config.py" --report-review-dates "$SKILLS_DEST" \
+    | while IFS= read -r _line; do
+        logger -t opencode-sync "$_line"
+    done
+
+exit 0

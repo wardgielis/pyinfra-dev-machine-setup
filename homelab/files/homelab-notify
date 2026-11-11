@@ -1,0 +1,22 @@
+#!/bin/sh
+# Post a failure to the Healthchecks.io check.
+#
+# Called by notify-failure@.service, by the timer units and by opencode-sync.
+# The ping URL lives in a root-only file, so the agent cannot send a false ping.
+set -u
+
+. /etc/homelab/monitoring.env 2>/dev/null || true
+
+_message="${*:-unknown failure}"
+
+if [ -z "${HEALTHCHECKS_PING_URL:-}" ]; then
+    logger -t homelab-notify "no ping url, dropped: ${_message}"
+    exit 0
+fi
+
+logger -t homelab-notify "reporting failure: ${_message}"
+
+# /fail never raises an alert on its own: an alert needs a missing ping.
+curl --fail --silent --show-error --max-time 15 \
+    --data "$(hostname) ${_message}" \
+    "${HEALTHCHECKS_PING_URL%/}/fail" >/dev/null || true

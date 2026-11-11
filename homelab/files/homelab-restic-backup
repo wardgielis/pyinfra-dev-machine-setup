@@ -1,0 +1,21 @@
+#!/bin/sh
+# Back up agent work and config with restic, then apply the retention policy.
+#
+# Phase 10 adds the cluster paths and the k3s token. A raw copy of a live SQLite
+# file is inconsistent, so a future hook must scale apps down or use .backup.
+set -eu
+
+. /etc/restic/restic.env
+
+/usr/bin/restic backup \
+    --host briareus \
+    /home/agent/code \
+    /home/agent/.local/share/opencode \
+    /etc/opencode \
+    /etc/opencode-secrets
+
+/usr/bin/restic forget \
+    --keep-daily 7 \
+    --keep-weekly 4 \
+    --keep-monthly 6 \
+    --prune

@@ -1,0 +1,10 @@
+[Unit]
+Description=Restic backup of agent work and config
+After=network-online.target
+Wants=network-online.target
+OnFailure=notify-failure@%n.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/restic/restic.env
+ExecStart=/usr/local/bin/homelab-restic-backup

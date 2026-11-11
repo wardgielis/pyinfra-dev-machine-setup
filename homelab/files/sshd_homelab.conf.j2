@@ -1,0 +1,6 @@
+# SSH hardening for the homelab host.
+# Written by the deploy, checked with sshd -t before every reload.
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+AllowUsers {{ admin_user }} {{ agent_user }}

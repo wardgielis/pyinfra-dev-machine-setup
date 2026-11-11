@@ -1,0 +1,26 @@
+# The root Application, app-of-apps (v2 draft, not applied yet).
+# It watches homelab/k8s/apps. Set the chart version in k8s/apps/argocd.yaml, not
+# here.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-20"
+spec:
+  project: platform
+  source:
+    repoURL: https://codeberg.org/wardgielis/pyinfra-dev-machine-setup.git
+    targetRevision: main
+    path: homelab/k8s/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

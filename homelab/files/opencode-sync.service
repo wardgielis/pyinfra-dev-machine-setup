@@ -1,0 +1,9 @@
+[Unit]
+Description=Sync the OpenCode config and skills from git
+After=network-online.target
+Wants=network-online.target
+OnFailure=notify-failure@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/opencode-sync

@@ -1,0 +1,46 @@
+# The apps project and the platform project (v2 draft, not applied yet).
+# tasks/argocd.py applies this file before the root app, because k8s/apps does not
+# hold it. Check both chart repository URLs before phase 8.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  description: Argo CD itself, the root app, and cluster storage
+  sourceRepos:
+    - https://codeberg.org/wardgielis/pyinfra-dev-machine-setup.git
+    - https://argoproj.github.io/argo-helm
+  destinations:
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+    - namespace: kube-system
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: apps
+  namespace: argocd
+spec:
+  description: Everything except Argo CD and the storage classes
+  sourceRepos:
+    - https://codeberg.org/wardgielis/pyinfra-dev-machine-setup.git
+    - https://mojo2600.github.io/pihole-kubernetes/
+  destinations:
+    - namespace: pihole
+      server: https://kubernetes.default.svc
+    - namespace: opencloud
+      server: https://kubernetes.default.svc
+    - namespace: whoami
+      server: https://kubernetes.default.svc
+    - namespace: previews
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: ""
+      kind: PersistentVolume

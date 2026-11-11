@@ -1,0 +1,26 @@
+#!/bin/sh
+# Daily local health report: low disk and a pending reboot.
+#
+# Both only post to the /fail URL. A passing day is silent.
+set -u
+
+. /etc/homelab/monitoring.env 2>/dev/null || true
+
+report() {
+    logger -t homelab-health "$1"
+    [ -n "${HEALTHCHECKS_PING_URL:-}" ] || return 0
+    curl --fail --silent --max-time 15 \
+        --data "$(hostname) $1" \
+        "${HEALTHCHECKS_PING_URL%/}/fail" >/dev/null || true
+}
+
+_usage=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+if [ -n "${_usage}" ] && [ "${_usage}" -ge 90 ]; then
+    report "disk ${_usage} percent full"
+fi
+
+if [ -f /var/run/reboot-required ]; then
+    report "reboot required"
+fi
+
+exit 0

@@ -1,0 +1,30 @@
+#!/bin/sh
+# Ping the Healthchecks.io check when every local probe passes.
+#
+# A plain ping only proves the host is up. A wedged opencode serve still reports
+# active in systemd, so the API probe is the check that catches a dead agent.
+set -u
+
+. /etc/homelab/monitoring.env 2>/dev/null || true
+
+fail() {
+    logger -t homelab-heartbeat "probe failed: $1"
+    if [ -n "${HEALTHCHECKS_PING_URL:-}" ]; then
+        curl --fail --silent --max-time 15 \
+            --data "$(hostname) $1" \
+            "${HEALTHCHECKS_PING_URL%/}/fail" >/dev/null || true
+    fi
+    exit 1
+}
+
+# Probe: the OpenCode server answers on the loopback API. /api/config is a real
+# route; /api/hello returns 404 in 2.2.7. Only run this once a password exists.
+if [ -n "${OPENCODE_PASSWORD:-}" ]; then
+    curl --fail --silent --max-time 10 \
+        --user "opencode:${OPENCODE_PASSWORD}" \
+        http://127.0.0.1:4096/api/config >/dev/null || fail "opencode api"
+fi
+
+[ -n "${HEALTHCHECKS_PING_URL:-}" ] || exit 0
+
+curl --fail --silent --max-time 15 "${HEALTHCHECKS_PING_URL}" >/dev/null || exit 1

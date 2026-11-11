@@ -1,0 +1,7 @@
+#!/bin/sh
+# Run brew from the Homebrew on Linux prefix.
+#
+# A wrapper, not a symlink: bin/brew derives its own prefix from the path it is
+# called by, so a symlink in /usr/local/bin makes the prefix /usr/local and breaks
+# every formula.
+exec /home/linuxbrew/.linuxbrew/bin/brew "$@"

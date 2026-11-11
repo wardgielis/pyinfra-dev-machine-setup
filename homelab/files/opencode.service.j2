@@ -1,0 +1,48 @@
+[Unit]
+Description=OpenCode server
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=10
+OnFailure=notify-failure@%n.service
+
+[Service]
+User={{ agent_user }}
+Group={{ agent_user }}
+WorkingDirectory=/home/{{ agent_user }}/code
+EnvironmentFile=/etc/opencode-secrets/opencode.env
+# Systemd does not read /etc/profile.d. Without this PATH the provider cannot
+# find the claude binary.
+Environment=PATH=/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/bin:/bin
+Environment=OPENCODE_CONFIG_DIR=/etc/opencode
+Environment=OPENCODE_DISABLE_PROJECT_CONFIG=1
+Environment=OPENCODE_DISABLE_AUTOUPDATE=1
+Environment=DISABLE_AUTOUPDATER=1
+ExecStart=/home/linuxbrew/.linuxbrew/bin/opencode serve --hostname 127.0.0.1 --port 4096
+Restart=on-failure
+RestartSec=5
+# Let a running session flush on stop. A restart still kills it, so upgrade at a
+# chosen time.
+TimeoutStopSec=90
+KillSignal=SIGTERM
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/home/{{ agent_user }}
+# The dash prefix skips a path that does not exist, so the unit starts in v1.
+InaccessiblePaths=-/srv -/etc/rancher -/var/lib/rancher /etc/opencode-secrets
+# Host processes bypass NetworkPolicy, so block the pod and service ranges and the
+# LAN here. The gateway stays reachable because it is the resolver.
+IPAddressDeny=10.42.0.0/16 10.43.0.0/16 {{ lan_subnet }}
+IPAddressAllow={{ lan_gateway }}
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+MemoryHigh=2.5G
+MemoryMax=3.5G
+OOMPolicy=continue
+TasksMax=2000
+
+[Install]
+WantedBy=multi-user.target

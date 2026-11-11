@@ -1,0 +1,7 @@
+# The only automatic gate. The repository is public and the secret model is two
+# gitignored .env files, so one leaked value is public forever.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
