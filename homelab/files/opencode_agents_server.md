@@ -31,6 +31,9 @@ as the user `agent`, without sudo, inside a systemd sandbox.
 - Push only feature branches, never `main` or any other protected branch.
 - Open a merge request for every change that should reach `main`. The owner reviews
   and merges it. Do not merge your own merge request.
-- Do not force-push, delete branches that are not yours, or change repository settings.
+- Force-push only to feature branches you created, and only after a rebase. Use
+  `git push --force-with-lease`, never a plain `--force`.
+- Never force-push to `main` or any other protected branch, and never delete branches
+  that are not yours. Do not change repository settings.
 - Long tasks are fine. The service restarts only at a chosen time, and a restart ends
   the session.
