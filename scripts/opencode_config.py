@@ -127,6 +127,32 @@ def render(target: str) -> str:
     return string.Template(text).substitute(values)
 
 
+AGENTS_CORE = REPO / "files" / "opencode_agents_core.md"
+AGENTS_ADDENDA = {
+    "laptop": REPO / "files" / "opencode_agents_laptop.md",
+    "server": REPO / "homelab" / "files" / "opencode_agents_server.md",
+}
+
+
+def render_agents(target: str) -> str:
+    """Build the AGENTS.md for one target.
+
+    The shared core comes first, then the addendum for the target. Both targets load
+    the same core, so the voice and skill rules cannot drift apart.
+
+    Args:
+        target: Either laptop or server.
+
+    Returns:
+        The full AGENTS.md text, ending with a newline.
+    """
+    if target not in AGENTS_ADDENDA:
+        raise SystemExit(f"Unknown target {target!r}. Use laptop or server.")
+    core = AGENTS_CORE.read_text(encoding="utf-8").rstrip() + "\n"
+    addendum = AGENTS_ADDENDA[target].read_text(encoding="utf-8").strip() + "\n"
+    return core + "\n" + addendum
+
+
 def check_drift() -> list[str]:
     """Compare the two rendered variants.
 

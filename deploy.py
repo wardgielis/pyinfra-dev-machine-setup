@@ -11,6 +11,7 @@ from pyinfra.operations import brew, files, python, server
 # targets, so a change on the laptop cannot miss the server.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "scripts"))
 from opencode_config import render as _render_opencode_config  # noqa: E402
+from opencode_config import render_agents as _render_opencode_agents  # noqa: E402
 
 
 def _deploy_template(dest, template_name, varnames, mode=None):
@@ -457,7 +458,7 @@ files.put(
 
 files.put(
     name="Sync OpenCode AGENTS.md",
-    src=str(pathlib.Path(__file__).parent / "files" / "opencode_agents.md"),
+    src=io.StringIO(_render_opencode_agents("laptop")),
     dest=os.path.expanduser("~/.config/opencode/AGENTS.md"),
 )
 

@@ -1,1 +1,35 @@
-{}
+{
+  "homebrew": { "type": "local", "command": ["brew", "mcp-server"] },
+  "argocd": {
+    "type": "local",
+    "command": ["npx", "-y", "argocd-mcp", "stdio"],
+    "environment": {
+      "ARGOCD_BASE_URL": "{env:ARGOCD_BASE_URL}",
+      "ARGOCD_API_TOKEN": "{env:ARGOCD_API_TOKEN}"
+    }
+  },
+  "grafana": {
+    "type": "local",
+    "command": ["uvx", "mcp-grafana"],
+    "environment": {
+      "GRAFANA_URL": "{env:GRAFANA_URL}",
+      "GRAFANA_SERVICE_ACCOUNT_TOKEN": "{env:GRAFANA_SERVICE_ACCOUNT_TOKEN}"
+    }
+  },
+  "atlassian": { "type": "remote", "url": "https://mcp.atlassian.com/v2/mcp" },
+  "gitlab": { "type": "remote", "url": "https://gitlab.com/api/v4/mcp" },
+  "opentofu": { "type": "remote", "url": "https://mcp.opentofu.org/mcp" },
+  "aws": {
+    "type": "local",
+    "command": ["uvx", "mcp-proxy-for-aws@latest", "https://aws-mcp.us-east-1.api.aws/mcp", "--region", "eu-west-1"]
+  },
+  "databricks": {
+    "type": "local",
+    "command": [
+      "uvx", "uc-mcp-proxy",
+      "--url", "https://dbc-03ed8bbb-c0ec.cloud.databricks.com/api/2.0/mcp/sql",
+      "--auth-type", "databricks-cli",
+      "--profile", "development"
+    ]
+  }
+}

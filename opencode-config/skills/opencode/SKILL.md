@@ -1,6 +1,6 @@
 ---
 name: opencode
-description: Use when editing or managing opencode in this repo — configuration (files/opencode_config.jsonc), plugins (opencode-config/plugins/), AGENTS.md (files/opencode_agents.md), or skills (opencode-config/skills/). Covers the repo-to-live file map, the repo-first editing rule, deploy.py Section 8 sync, and the skill authoring workflow (frontmatter, naming, lifecycle, size, vendoring, validation). For generic opencode configuration (schema, agents, permissions, MCP, plugin API) use the upstream docs.
+description: Use when editing or managing opencode in this repo — configuration (files/opencode_config.jsonc), plugins (opencode-config/plugins/), AGENTS.md (files/opencode_agents_core.md and files/opencode_agents_laptop.md), or skills (opencode-config/skills/). Covers the repo-to-live file map, the repo-first editing rule, deploy.py Section 8 sync, and the skill authoring workflow (frontmatter, naming, lifecycle, size, vendoring, validation). For generic opencode configuration (schema, agents, permissions, MCP, plugin API) use the upstream docs.
 metadata:
   review_after: "2026-12-07"
   docs_url: "https://opencode.ai/docs/skills/"
@@ -27,7 +27,7 @@ This skill is the operating manual for managing **opencode itself in this repo**
 | Config | `files/opencode_config.jsonc` | `~/.config/opencode/opencode.jsonc` | `_deploy_template()` (uses `string.Template`, `$$` escapes `$`; requires `OPENCODE_SKILLS_PATH` env) |
 | Plugins | `opencode-config/plugins/<id>/` | `~/.config/opencode/plugins/<id>/` | `files.sync` + `npm install` |
 | Plugin deps | `opencode-config/package.json` | `~/.config/opencode/package.json` | `files.put` + `npm install` |
-| AGENTS.md | `files/opencode_agents.md` | `~/.config/opencode/AGENTS.md` | `files.put` |
+| AGENTS.md | `files/opencode_agents_core.md` + `files/opencode_agents_laptop.md` | `~/.config/opencode/AGENTS.md` | `files.put` (rendered) |
 | Skills | `opencode-config/skills/<name>/SKILL.md` | loaded via the config `skills` array (no copy) | none — read live from repo |
 
 Key details:
@@ -40,7 +40,7 @@ Key details:
   **Startup-hook gotcha**: plugins load *after* the client's event stream connects — the log shows `"event stream connected"` roughly 20 ms before `stage=setup plugin=…`. A `server.connected` listener registered in `setup()` therefore never fires (confirmed with a pty capture in which the handler never ran). Do startup work directly in `setup()`, deferred with `setTimeout` so the first frame commits before `ui.toast.show`; use `session.created` only as an extra fallback.
 
   **JSONC parsing gotcha**: plugins that read `opencode.jsonc` must strip comments string-aware. A naive `raw.replace(/\/\/.*$/gm, "")` corrupts `"$schema": "https://…"`, `JSON.parse` then throws, and a `try/catch` fallback silently degrades the plugin to a no-op. `skill-freshness/tui.ts` carries `parseJsonc()` for this.
-- **AGENTS.md**: always edit `files/opencode_agents.md` (this is the deployed file's source).
+- **AGENTS.md**: always edit `files/opencode_agents_core.md` (shared) or `files/opencode_agents_laptop.md` (laptop only).
 
 ## Claude Agent provider
 
@@ -65,7 +65,7 @@ skills, MCP servers and compaction.
 - **Legacy**: the pre-2.2.3 `@khalilgharbaoui/opencode-claude-code-plugin` (and
   openchamber's archived `opencode-claude`) is superseded. `deploy.py` Section 8 removes
   its cache and state; the casks stay because the native provider needs them.
-- **Troubleshooting**: "If the `claude-agent` provider dies" in `files/opencode_agents.md`
+- **Troubleshooting**: "If the `claude-agent` provider dies" in `files/opencode_agents_laptop.md`
   (missing/outdated `claude`, `OPENCODE_CLAUDE_PATH`, cask-doctor).
 
 ## Skills lifecycle

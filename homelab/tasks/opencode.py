@@ -89,6 +89,9 @@ if SKILLS_SRC.is_dir():
         delete=True,
         exclude=[*_ignored_files, ".DS_Store"],
         exclude_dir=[*DENIED_SKILLS, *_ignored_dirs],
+        # The agent user must read the skills, so the folders and files stay world-readable.
+        mode="644",
+        dir_mode="755",
         _sudo=True,
     )
     logger.info(
@@ -121,7 +124,7 @@ _config = files.put(
 
 _agents = files.put(
     name="Write the server AGENTS.md",
-    src="files/opencode_agents.md",
+    src=io.StringIO(opencode_config.render_agents("server")),
     dest=f"{CONFIG_DIR}/AGENTS.md",
     mode="0644",
     _sudo=True,
@@ -135,6 +138,11 @@ _agents = files.put(
 _secret_lines = [f"OPENCODE_PASSWORD={os.environ.get('OPENCODE_PASSWORD', '')}"]
 if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
     _secret_lines.append(f"CLAUDE_CODE_OAUTH_TOKEN={os.environ['CLAUDE_CODE_OAUTH_TOKEN']}")
+
+# MCP values, referenced from the server config as {env:NAME}. They sit here, not in
+# the root-owned config file, which the agent can read.
+for _mcp_var in ("GRAFANA_URL", "GRAFANA_SERVICE_ACCOUNT_TOKEN", "ARGOCD_BASE_URL", "ARGOCD_API_TOKEN", "GITLAB_TOKEN"):
+    _secret_lines.append(f"{_mcp_var}={os.environ.get(_mcp_var, '')}")
 
 files.directory(
     name="Create the secrets folder",

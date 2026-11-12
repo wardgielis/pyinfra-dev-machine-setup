@@ -31,9 +31,18 @@ if ! git -C "$REPO" pull --ff-only --quiet origin main; then
     exit 1
 fi
 
-# The clone only holds tracked files, so the gitignored org skills can never
-# arrive this way. pycharm needs the IDE MCP server, so skip it.
-rsync -a --delete --exclude 'pycharm/' "$SKILLS_SRC/" "$SKILLS_DEST/"
+# The clone only holds tracked files, so the gitignored org skills never arrive this
+# way. Their copies on the server are excluded here, so --delete leaves them alone.
+# pycharm needs the IDE MCP server, so skip it.
+rsync -a --delete \
+    --exclude 'pycharm/' \
+    --exclude 'aws-cli/' \
+    --exclude 'biocloud-databricks/' \
+    --exclude 'biocloud-pyinfra/' \
+    --exclude 'naturalis-kubernetes/' \
+    --exclude 'naturalis-opentofu/' \
+    --exclude 'naturalis-terraform-pitfalls/' \
+    "$SKILLS_SRC/" "$SKILLS_DEST/"
 
 _tmp=$(mktemp)
 trap 'rm -f "$_tmp"' EXIT
