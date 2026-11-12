@@ -23,6 +23,7 @@ Goal: write text that a non-native English reader understands on the first read.
 8. **Avoid phrasal verbs when a single verb exists.** Write "remove" instead of "take out", "start" instead of "kick off", "find" instead of "figure out".
 9. **Do not use humor, sarcasm or hints.** They do not translate well.
 10. **Be specific.** Write "Raises an error if the file is empty", not "Handles bad input".
+11. **Do not start a sentence with a code name.** Function, variable, class and column names stay lowercase, and they do not begin a sentence. Start with the role instead, such as "The function" or "This step". Write "The classify_taxon function must return the bare name", not "Classify_taxon must return the bare name". Do not uppercase the first letter of a code name either.
 
 ## Characters to avoid
 
