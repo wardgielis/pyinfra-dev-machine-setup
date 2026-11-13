@@ -6,6 +6,7 @@ the permission policy, is the security boundary for shell commands.
 
 import io
 import os
+import string
 import subprocess
 import sys
 from pathlib import Path
@@ -141,13 +142,44 @@ if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
 
 # MCP values, referenced from the server config as {env:NAME}. They sit here, not in
 # the root-owned config file, which the agent can read.
-for _mcp_var in ("GRAFANA_URL", "GRAFANA_SERVICE_ACCOUNT_TOKEN", "ARGOCD_BASE_URL", "ARGOCD_API_TOKEN", "GITLAB_TOKEN"):
+for _mcp_var in (
+    "GRAFANA_URL",
+    "GRAFANA_SERVICE_ACCOUNT_TOKEN",
+    "ARGOCD_BASE_URL",
+    "ARGOCD_API_TOKEN",
+    "GITLAB_TOKEN",
+    "JIRA_API_TOKEN",
+):
     _secret_lines.append(f"{_mcp_var}={os.environ.get(_mcp_var, '')}")
 
 files.directory(
     name="Create the secrets folder",
     path=SECRETS_DIR,
     mode="0700",
+    _sudo=True,
+)
+
+# The Jira CLI reads its settings from a file in the agent's home. The repo template
+# holds only placeholders, so the values come from homelab/.env at deploy time.
+_jira_template = (REPO / "files" / "jira_config").read_text(encoding="utf-8")
+_jira_values = {key: os.environ.get(key, "") for key in ("JIRA_LOGIN", "JIRA_SERVER", "JIRA_PROJECT_KEY", "JIRA_BOARD_ID")}
+
+files.directory(
+    name="Create the agent Jira config folder",
+    path=f"/home/{AGENT_USER}/.config/.jira",
+    user=AGENT_USER,
+    group=AGENT_USER,
+    mode="0700",
+    _sudo=True,
+)
+
+files.put(
+    name="Write the agent Jira CLI config",
+    src=io.StringIO(string.Template(_jira_template).safe_substitute(_jira_values)),
+    dest=f"/home/{AGENT_USER}/.config/.jira/.config.yml",
+    user=AGENT_USER,
+    group=AGENT_USER,
+    mode="0600",
     _sudo=True,
 )
 

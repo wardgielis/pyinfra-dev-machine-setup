@@ -38,6 +38,8 @@ TOOLS = [
     "k9s",
     "restic",
     "btop",
+    # Jira CLI for the agent. Its settings come from the agent's config file.
+    "jira-cli",
 ]
 
 # The opencode formula from Homebrew core conflicts with the v2 formula from the
