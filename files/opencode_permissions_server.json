@@ -10,5 +10,6 @@
   { "action": "read", "resource": "*.env.example", "effect": "allow" },
   { "action": "shell", "resource": "sudo *", "effect": "deny" },
   { "action": "shell", "resource": "rm -rf /*", "effect": "deny" },
-  { "action": "shell", "resource": "git push --force *", "effect": "deny" }
+  { "action": "shell", "resource": "git push --force *", "effect": "deny" },
+  { "action": "shell", "resource": "git push --force-with-lease *", "effect": "allow" }
 ]
