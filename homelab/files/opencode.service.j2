@@ -9,7 +9,7 @@ OnFailure=notify-failure@%n.service
 [Service]
 User={{ agent_user }}
 Group={{ agent_user }}
-WorkingDirectory=/home/{{ agent_user }}/code
+WorkingDirectory=/home/{{ agent_user }}/dev
 EnvironmentFile=/etc/opencode-secrets/opencode.env
 # Systemd does not read /etc/profile.d. Without this PATH the provider cannot
 # find the claude binary.

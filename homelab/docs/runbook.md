@@ -63,6 +63,44 @@ sudo rm -f /run/opencode-config-pending
 A new session picks up a changed skill file without a restart. A changed
 opencode.jsonc needs the restart.
 
+## Stop the server for a while
+
+```sh
+ssh me@briareus.dove-cobia.ts.net
+sudo systemctl stop opencode     # ends the sessions cleanly, up to 90 seconds
+sudo systemctl poweroff
+```
+
+Start it with the power button. A normal shutdown is not a power loss, so the BIOS
+setting does not bring it back on its own. After boot, OpenCode starts by itself, the
+node rejoins the tailnet with its tag, and the sync timer catches up on a missed run.
+
+## Permission policy for unattended runs
+
+The server config allows read, edit, shell, web fetch and web search, because a prompt
+would stall an overnight run. It hard-denies four things:
+
+- reading `.env` and `.env.*` files, so a stray `cat` cannot print secrets
+- `sudo`
+- `rm -rf /`
+- `git push --force`
+
+The laptop keeps the defaults, where anything unusual asks first.
+
+The systemd sandbox, not this policy, is the security boundary. The policy stops
+accidents, not a determined agent.
+
+## The terminal client
+
+`opencode-remote` runs the terminal client against the server:
+
+```sh
+opencode-remote                     # uses https://briareus.dove-cobia.ts.net:8443
+OPENCODE_SERVER_URL=https://other:8443 opencode-remote   # another server
+```
+
+It needs the Tailscale app connected. The client asks for the password on first use.
+
 ## Restore from backup
 
 The small test after phase 6:
@@ -70,8 +108,8 @@ The small test after phase 6:
 ```sh
 sudo systemctl start restic-backup
 sudo restic snapshots
-sudo restic restore latest --target /var/tmp/restore-test --include /home/agent/code
-diff -r /home/agent/code /var/tmp/restore-test/home/agent/code
+sudo restic restore latest --target /var/tmp/restore-test --include /home/agent/dev
+diff -r /home/agent/dev /var/tmp/restore-test/home/agent/dev
 ```
 
 Repeat it with the full path set after phase 10.

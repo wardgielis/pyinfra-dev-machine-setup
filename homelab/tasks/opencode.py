@@ -67,7 +67,7 @@ def _gitignored_entries() -> list[str]:
 # ------------------------------------------------------------
 files.directory(
     name="Create the agent workspace",
-    path=f"/home/{AGENT_USER}/code",
+    path=f"/home/{AGENT_USER}/dev",
     user=AGENT_USER,
     group=AGENT_USER,
     mode="0755",

@@ -167,3 +167,14 @@ function awsauth() {
     aws login
     aws sts get-caller-identity --profile pycharm
 }
+
+# ==========================================
+# 10. OPENCODE REMOTE
+# Runs the terminal client against the homelab server instead of this machine.
+# Needs the Tailscale app connected and the server running. The server requires
+# a password; the client asks for it on first use.
+# ==========================================
+function opencode-remote() {
+    local server="${OPENCODE_SERVER_URL:-https://briareus.dove-cobia.ts.net:8443}"
+    opencode --server "$server" "$@"
+}

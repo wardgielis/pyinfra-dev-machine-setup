@@ -9,7 +9,7 @@ set -eu
 
 /usr/bin/restic backup \
     --host briareus \
-    /home/agent/code \
+    /home/agent/dev \
     /home/agent/.local/share/opencode \
     /etc/opencode \
     /etc/opencode-secrets

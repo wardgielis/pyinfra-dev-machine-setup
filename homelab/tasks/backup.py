@@ -17,7 +17,7 @@ PASSWORD = os.environ.get("RESTIC_PASSWORD", "")
 
 # v1 paths. Phase 10 adds /srv/data, /srv/k3s and the k3s token.
 PATHS = [
-    "/home/agent/code",
+    "/home/agent/dev",
     "/home/agent/.local/share/opencode",
     "/etc/opencode",
     "/etc/opencode-secrets",

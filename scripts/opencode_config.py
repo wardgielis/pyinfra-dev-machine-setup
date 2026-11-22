@@ -22,12 +22,22 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 TEMPLATE = REPO / "files" / "opencode_config.jsonc"
-MCP_FRAGMENTS = {
-    "laptop": REPO / "files" / "opencode_mcp_laptop.json",
-    "server": REPO / "files" / "opencode_mcp_server.json",
+FRAGMENT_PATHS = {
+    "mcp": {
+        "laptop": REPO / "files" / "opencode_mcp_laptop.json",
+        "server": REPO / "files" / "opencode_mcp_server.json",
+    },
+    "permissions": {
+        "laptop": REPO / "files" / "opencode_permissions_laptop.json",
+        "server": REPO / "files" / "opencode_permissions_server.json",
+    },
 }
 
-MCP_ANCHOR = "${OPENCODE_MCP_SERVERS}"
+# One anchor per fragment, in the order the template holds them.
+ANCHORS = {
+    "mcp": "${OPENCODE_MCP_SERVERS}",
+    "permissions": "${OPENCODE_PERMISSIONS}",
+}
 SKILLS_ANCHOR = "${OPENCODE_SKILLS_PATH}"
 
 SKILLS_PATHS = {
@@ -91,16 +101,17 @@ def indent_after_first_line(text: str, spaces: int) -> str:
     return "\n".join([lines[0], *(pad + line for line in lines[1:])])
 
 
-def mcp_fragment(target: str) -> str:
-    """Return the rendered MCP servers block for a target.
+def render_fragment(target: str, name: str) -> str:
+    """Render one fragment for a target.
 
     Args:
         target: Either laptop or server.
+        name: The fragment name, mcp or permissions.
 
     Returns:
-        The JSON object body, indented for insertion after the servers key.
+        The fragment text, indented for insertion after its key.
     """
-    fragment = MCP_FRAGMENTS[target].read_text(encoding="utf-8").strip()
+    fragment = FRAGMENT_PATHS[name][target].read_text(encoding="utf-8").strip()
     rendered = string.Template(fragment).substitute(read_variables())
     return indent_after_first_line(rendered, 4)
 
@@ -114,14 +125,16 @@ def render(target: str) -> str:
     Returns:
         The full config file text, ending with a newline.
     """
-    if target not in MCP_FRAGMENTS:
+    if target not in FRAGMENT_PATHS["mcp"]:
         raise SystemExit(f"Unknown target {target!r}. Use laptop or server.")
 
     text = TEMPLATE.read_text(encoding="utf-8")
-    if text.count(MCP_ANCHOR) != 1:
-        raise SystemExit(f"{TEMPLATE} must contain {MCP_ANCHOR} exactly once.")
+    for anchor in ANCHORS.values():
+        if text.count(anchor) != 1:
+            raise SystemExit(f"{TEMPLATE} must contain {anchor} exactly once.")
 
-    text = text.replace(MCP_ANCHOR, mcp_fragment(target))
+    for name, anchor in ANCHORS.items():
+        text = text.replace(anchor, render_fragment(target, name))
     values = read_variables()
     values["OPENCODE_SKILLS_PATH"] = skills_path(target)
     return string.Template(text).substitute(values)
@@ -157,25 +170,35 @@ def check_drift() -> list[str]:
     """Compare the two rendered variants.
 
     Returns:
-        A list of problems. Empty when the variants differ only at the two
-        anchors.
+        A list of problems. Empty when the configs differ only at the anchors and
+        both AGENTS files share the same core.
     """
     problems = []
     template = TEMPLATE.read_text(encoding="utf-8")
-    if template.count(MCP_ANCHOR) != 1:
-        problems.append(f"the template must hold {MCP_ANCHOR} exactly once")
+    for anchor in ANCHORS.values():
+        if template.count(anchor) != 1:
+            problems.append(f"the template must hold {anchor} exactly once")
     if SKILLS_ANCHOR not in template:
         problems.append(f"the template must hold {SKILLS_ANCHOR}")
 
     normalized = {}
     for target in ("laptop", "server"):
         text = render(target)
-        text = text.replace(mcp_fragment(target), MCP_ANCHOR)
+        for name, anchor in ANCHORS.items():
+            text = text.replace(render_fragment(target, name), anchor)
         text = text.replace(skills_path(target), SKILLS_ANCHOR)
         normalized[target] = text
 
     if normalized["laptop"] != normalized["server"]:
-        problems.append("the laptop and server variants differ outside the two anchors")
+        problems.append("the laptop and server variants differ outside the anchors")
+
+    # Both hosts must load the same AGENTS core, or the shared rules drift apart.
+    core = AGENTS_CORE.read_text(encoding="utf-8").strip()
+    if not core:
+        problems.append("the AGENTS core is empty")
+    for target in ("laptop", "server"):
+        if not render_agents(target).startswith(core):
+            problems.append(f"the {target} AGENTS.md does not start with the shared core")
 
     return problems
 
@@ -208,7 +231,7 @@ def main(argv: list[str]) -> int:
         Process exit code.
     """
     parser = argparse.ArgumentParser(description="Render and check the shared OpenCode config.")
-    parser.add_argument("--target", choices=sorted(MCP_FRAGMENTS))
+    parser.add_argument("--target", choices=sorted(FRAGMENT_PATHS["mcp"]))
     parser.add_argument("--out", help="Write the rendered config to this path.")
     parser.add_argument("--check-drift", action="store_true", help="Compare the two variants.")
     parser.add_argument("--report-review-dates", metavar="DIR", help="List expired review dates.")
