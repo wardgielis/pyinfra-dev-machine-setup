@@ -6,6 +6,7 @@ import string
 import subprocess
 import sys
 from pyinfra.operations import brew, files, python, server
+from pyinfra import local
 
 # The config renderer is shared with the homelab deploy: one template, two
 # targets, so a change on the laptop cannot miss the server.
@@ -110,6 +111,7 @@ EVAL_CASKS = [          # Trying these out — promote or drop as needed
 GUI_CASKS = [
     "ghostty",
     "vscodium",
+    "visual-studio-code",  # The editor for the homelab workflow, see vscode_setup.py
     "bruno",
     "font-jetbrains-mono-nerd-font",
     "bitwarden",
@@ -518,6 +520,14 @@ for _legacy_claude_data in (
         path=os.path.expanduser(_legacy_claude_data),
         present=False,
     )
+
+
+# ============================================================
+# SECTION 8A: VS CODE (app, extensions, settings, homelab SSH host)
+# Lives in its own file so that it can also run alone:
+#   uv run pyinfra @local vscode_setup.py
+# ============================================================
+local.include("vscode_setup.py")
 
 
 # ============================================================

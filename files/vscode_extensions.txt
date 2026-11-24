@@ -1,0 +1,48 @@
+# Extensions for VS Code, one id per line. vscode_setup.py installs the ones that are
+# missing. It never removes an extension that you added by hand.
+#
+# These are on the Microsoft marketplace. VSCodium uses Open VSX, which lacks several
+# of them (Remote - SSH, Pylance, Data Wrangler), so VS Code is the editor for the
+# homelab workflow. VSCodium stays installed and is not managed here.
+
+# --- OpenCode ---
+# The official extension. It opens the terminal client in the editor.
+sst-dev.opencode
+# Not installed on purpose: vyomeshupadhyay.vscode-opencode. It has no source
+# repository and it would hold the server password. Add it by hand only after you
+# have looked at its page.
+
+# --- Remote development (the homelab server) ---
+ms-vscode-remote.remote-ssh
+
+# --- Python ---
+ms-python.python
+ms-python.vscode-pylance
+ms-python.debugpy
+charliermarsh.ruff
+ms-toolsai.jupyter
+# Opens CSV and Parquet files as tables. This is the closest match for the file
+# viewer in Big Data Tools.
+ms-toolsai.datawrangler
+tamasfe.even-better-toml
+redhat.vscode-yaml
+
+# --- Git ---
+eamodio.gitlens
+GitLab.gitlab-workflow
+
+# --- Databases ---
+# Postgres, ClickHouse and more, with an SSH tunnel. The free core has no
+# connection limit.
+dbcode.dbcode
+# Databricks: bundles, notebooks, SQL.
+databricks.databricks
+
+# --- AWS and S3 ---
+# The official toolkit. S3 browsing here cannot open a cross-account bucket by
+# name, so keep PyCharm for that until a better extension has proven itself.
+AmazonWebServices.aws-toolkit-vscode
+
+# --- Infrastructure ---
+opentofu.vscode-opentofu
+ms-kubernetes-tools.vscode-kubernetes-tools

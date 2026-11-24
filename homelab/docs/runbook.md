@@ -106,6 +106,49 @@ address changes, run the deploy again.
 Known limit: the personal Naturalis key sits on this box. Ask infra for a dedicated
 read-only key and a longer-lived server profile, then replace both.
 
+## Work from VS Code on the server
+
+`vscode_setup.py` in the repo root installs VS Code, the extensions in
+`files/vscode_extensions.txt`, the settings in `files/vscode_settings.json` and a
+managed `briareus-agent` host in `~/.ssh/config`. Run it alone with
+`uv run pyinfra @local vscode_setup.py`, from the repo root. It also runs as part of the
+laptop deploy. Edit the files in the repo, because the next run overwrites the
+settings. VSCodium stays installed and is not managed.
+
+Why VS Code and not VSCodium: Remote - SSH, Pylance and Data Wrangler are not on
+Open VSX.
+
+Connect:
+
+1. In VS Code, run the command Remote-SSH: Connect to Host and pick `briareus-agent`.
+2. Open a folder under `/home/agent/dev`. Files, git and terminals are then on the
+   server, next to the OpenCode service.
+3. In the terminal run `oc`. It joins the same OpenCode server and sessions as the
+   phone and the laptop.
+
+The host entry names the Bitwarden SSH agent socket. A program that starts from the
+Dock does not read `.zshenv`, so without that line VS Code could not find the key.
+Bitwarden must be unlocked.
+
+Databases in the remote window: the ClickHouse tunnels already run on the server.
+Add a ClickHouse connection in DBCode with host `127.0.0.1`, port `8123` for
+production or `8124` for development, and the same accounts as the OpenCode MCP
+servers (they are in `homelab/.env`). The laptop VPN is not needed for that. Postgres
+hosts are not routed from the server, so use a local window with the VPN on for them.
+
+S3: the AWS Toolkit uses the profiles of the agent user in the remote window. It cannot
+open a cross-account bucket by name. Keep PyCharm with Big Data Tools for that until a
+better extension has proven itself. The small S3 extensions (a few hundred installs)
+read your AWS profiles, so look at their source before you try one.
+
+The community extension `vyomeshupadhyay.vscode-opencode` is not installed on purpose.
+It has no source repository, and it would hold the server password. The official
+`sst-dev.opencode` is installed.
+
+First checks after the first connection, because they were not tested without a screen:
+the OpenCode extension against the server, DBCode in the remote window, and the AWS
+Toolkit with the agent profiles. Write what you find here.
+
 ## Log in the agent tools (AWS and Databricks)
 
 The aws and databricks MCP servers use browser logins. A login runs on the server as

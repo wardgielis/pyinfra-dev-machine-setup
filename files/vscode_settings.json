@@ -1,0 +1,70 @@
+{
+  // Managed by pyinfra from files/vscode_settings.json. Edit it in the repo, because
+  // the next deploy overwrites this file.
+
+  // --- Privacy ---
+  "telemetry.telemetryLevel": "off",
+  "redhat.telemetry.enabled": false,
+
+  // --- Look ---
+  "editor.fontFamily": "'JetBrainsMono Nerd Font', Menlo, monospace",
+  "terminal.integrated.fontFamily": "'JetBrainsMono Nerd Font'",
+  "editor.minimap.enabled": false,
+  "workbench.startupEditor": "none",
+
+  // --- Editing ---
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.watcherExclude": {
+    "**/.venv/**": true,
+    "**/node_modules/**": true,
+    "**/.git/objects/**": true,
+    "**/__pycache__/**": true
+  },
+  "search.exclude": {
+    "**/.venv": true,
+    "**/node_modules": true,
+    "**/uv.lock": true
+  },
+
+  // --- Python: Ruff formats and fixes, Pylance checks only the open files ---
+  // Pylance can use more than 1 GB on a big repository. The homelab has 8 GB, so the
+  // default checks only what is open.
+  "python.analysis.diagnosticMode": "openFilesOnly",
+  "python.terminal.activateEnvironment": true,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "[toml]": { "editor.defaultFormatter": "tamasfe.even-better-toml" },
+  "[yaml]": { "editor.defaultFormatter": "redhat.vscode-yaml" },
+
+  // --- Git ---
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": false,
+
+  // --- Terminal ---
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.scrollback": 10000,
+
+  // --- Remote: the homelab server ---
+  // The host entry briareus-agent comes from the managed block in ~/.ssh/config.
+  // These extensions are installed on the server without a prompt. Keep the list
+  // short: every one of them uses memory on the 8 GB server.
+  "remote.SSH.defaultExtensions": [
+    "ms-python.python",
+    "charliermarsh.ruff",
+    "tamasfe.even-better-toml",
+    "redhat.vscode-yaml",
+    "eamodio.gitlens",
+    "dbcode.dbcode",
+    "sst-dev.opencode"
+  ],
+  "remote.SSH.connectTimeout": 30,
+  "remote.SSH.showLoginTerminal": false
+}
