@@ -1,5 +1,8 @@
 {
   "$$schema": "https://opencode.ai/config.json",
+  // Default model when a session picks none. A choice in the model picker still wins.
+  // Both targets use it, so a session behaves the same on the laptop and the server.
+  "model": "claude-agent/haiku",
   // Rules for tools. The server variant allows routine work, because an unattended
   // run must not stall on a prompt, and hard-denies a few risky commands. The laptop
   // variant is empty, so the defaults apply and anything unusual asks first.
