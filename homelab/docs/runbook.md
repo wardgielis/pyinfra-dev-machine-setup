@@ -141,12 +141,27 @@ open a cross-account bucket by name. Keep PyCharm with Big Data Tools for that u
 better extension has proven itself. The small S3 extensions (a few hundred installs)
 read your AWS profiles, so look at their source before you try one.
 
+OpenCode in the editor: the official `sst-dev.opencode` only opens the terminal
+client. `FedaykinDev.openchamber` (OpenChamber) is the full interface. It is MIT
+licensed with public source, and the package has no analytics hosts. It makes one update
+check to api.openchamber.dev. It is a plain VS Code extension, and VS Code copies it to
+the server by itself when you connect. Use it in the Remote-SSH window, not in a local
+window, because the sessions refer to folders on the server.
+
+Two small files on the server connect it to the OpenCode server, and the homelab deploy
+writes both:
+- `~/.vscode-server/data/Machine/settings.json` sets `openchamber.apiUrl` to
+  `http://127.0.0.1:4096`.
+- `~/.vscode-server/server-env-setup` gives VS Code Server `OPENCODE_PASSWORD`, read
+  from `~/.config/opencode-password`. The script holds no secret. Every process in that
+  remote window, terminals included, then has the variable. The agent user already
+  holds that password.
+
 The community extension `vyomeshupadhyay.vscode-opencode` is not installed on purpose.
-It has no source repository, and it would hold the server password. The official
-`sst-dev.opencode` is installed.
+It has no source repository.
 
 First checks after the first connection, because they were not tested without a screen:
-the OpenCode extension against the server, DBCode in the remote window, and the AWS
+OpenChamber against the server, DBCode in the remote window, and the AWS
 Toolkit with the agent profiles. Write what you find here.
 
 ## Log in the agent tools (AWS and Databricks)
