@@ -130,21 +130,24 @@ The host entry names the Bitwarden SSH agent socket. A program that starts from 
 Dock does not read `.zshenv`, so without that line VS Code could not find the key.
 Bitwarden must be unlocked.
 
-Databases in the remote window: the ClickHouse tunnels already run on the server, so do
-not add an SSH tunnel in DBCode there. Add a ClickHouse connection with host `127.0.0.1`,
-port `8123` for production or `8124` for development, SSH tunnel off, and the same
-accounts as the OpenCode MCP servers (they are in `homelab/.env`). The laptop VPN is not
-needed for that. Postgres hosts are not routed from the server, so use a local window
-with the VPN on for them.
+Databases in the remote window use SQLTools (free, open source), with the PostgreSQL and
+ClickHouse drivers. DBCode was dropped on 2026-11-24 because its buttons are behind a paid
+plan. The ClickHouse tunnels already run on the server, so no SSH tunnel is needed. The
+homelab deploy writes two ready connections into the server's machine settings
+(`~/.vscode-server/data/Machine/settings.json`): "ClickHouse production (server tunnel)" on
+`127.0.0.1:8123` and "ClickHouse development (server tunnel)" on `127.0.0.1:8124`. They
+use the same accounts as the OpenCode MCP servers, and SQLTools asks for the password when
+you connect. The laptop VPN is not needed for that. Those accounts can write, so treat
+every statement that changes data as your own decision. Postgres hosts are not routed
+from the server, so use a local window with the VPN on for them. SQLTools has no SSH tunnel
+of its own, so in a local window start a tunnel with `ssh -L` first.
 
-A DBCode SSH tunnel with agent login fails in the remote window with "Could not find the
-SSH_AUTH_SOCK environment variable". The server has no SSH agent on purpose, because agent
-forwarding is off. In a local window the same login would use the Apple agent, which has
-no Naturalis key, so use a private key file there: `~/.ssh/naturalis_work_pc`.
+For a bigger visual client outside VS Code, DBeaver Community is free
+(`brew install --cask dbeaver-community`). It is not part of the deploy yet.
 
-DBCode saves its connections in the user `settings.json`. The deploy sets only the keys in
-`files/vscode_settings.json` and keeps everything else, so the connections stay. Comments
-in the live file are not kept.
+The deploy sets only the keys in `files/vscode_settings.json` in your user `settings.json`
+and keeps everything else. Comments in the live file are not kept. The old `dbcode.*`
+keys that DBCode left there are unused. You can delete them.
 
 S3: the AWS Toolkit uses the profiles of the agent user in the remote window. It cannot
 open a cross-account bucket by name. Keep PyCharm with Big Data Tools for that until a
@@ -174,7 +177,7 @@ The community extension `vyomeshupadhyay.vscode-opencode` is not installed on pu
 It has no source repository.
 
 First checks after the first connection, because they were not tested without a screen:
-the web UI in Simple Browser, DBCode in the remote window, and the AWS
+the web UI in Simple Browser, SQLTools in the remote window, and the AWS
 Toolkit with the agent profiles. Write what you find here.
 
 ## Log in the agent tools (AWS and Databricks)

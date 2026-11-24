@@ -5,6 +5,7 @@ the permission policy, is the security boundary for shell commands.
 """
 
 import io
+import json
 import os
 import string
 import subprocess
@@ -293,8 +294,55 @@ files.block(
     _sudo_user=AGENT_USER,
 )
 
-# The OpenChamber trial wrote these two files. Remove them.
-for _leftover in (f"{_vscode_server}/server-env-setup", f"{_vscode_server}/data/Machine/settings.json"):
+# SQLTools connections for the Remote-SSH window. The two ClickHouse tunnels (see
+# tasks/naturalis.py) listen on this host, so the connections need no SSH tunnel. The
+# password is never written: SQLTools asks for it when you connect. The user names come
+# from homelab/.env, the same accounts as the MCP servers.
+_machine_settings = f"{_vscode_server}/data/Machine/settings.json"
+
+# Create each level by itself, so every folder belongs to the agent user. One sudo call
+# for the whole path would leave the parents owned by root, and VS Code Server could not
+# write into them.
+for _level in ("", "/data", "/data/Machine"):
+    files.directory(
+        name=f"Create the VS Code Server folder {_vscode_server}{_level}",
+        path=f"{_vscode_server}{_level}",
+        user=AGENT_USER,
+        group=AGENT_USER,
+        mode="0755",
+        _sudo=True,
+    )
+
+_sqltools_connections = [
+    {
+        "name": f"ClickHouse {_label} (server tunnel)",
+        "driver": "ClickHouse",
+        "server": "http://127.0.0.1",
+        "port": _port,
+        "database": "default",
+        "username": os.environ.get(_user_var, ""),
+        "passwordMode": "Ask on connect",
+        "requestTimeout": 30000,
+        "enableTls": False,
+    }
+    for _label, _port, _user_var in (
+        ("production", 8123, "CLICKHOUSE_PROD_USER"),
+        ("development", 8124, "CLICKHOUSE_DEV_USER"),
+    )
+]
+
+files.put(
+    name="Write the VS Code Server machine settings with the SQLTools connections",
+    src=io.StringIO(json.dumps({"sqltools.connections": _sqltools_connections}, indent=2) + "\n"),
+    dest=_machine_settings,
+    user=AGENT_USER,
+    group=AGENT_USER,
+    mode="0644",
+    _sudo=True,
+)
+
+# The OpenChamber trial wrote this file. Remove it.
+for _leftover in (f"{_vscode_server}/server-env-setup",):
     files.file(
         name=f"Remove the OpenChamber trial file {_leftover}",
         path=_leftover,

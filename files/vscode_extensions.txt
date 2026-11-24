@@ -36,9 +36,13 @@ eamodio.gitlens
 GitLab.gitlab-workflow
 
 # --- Databases ---
-# Postgres, ClickHouse and more, with an SSH tunnel. The free core has no
-# connection limit.
-dbcode.dbcode
+# SQLTools is free and open source. DBCode was dropped on 2026-11-24 because its
+# buttons are behind a paid plan. In the Remote-SSH window the ClickHouse tunnels run on
+# the server, so no SSH tunnel is needed there. The deploy writes two ready connections
+# (see homelab/tasks/opencode.py). SQLTools has no SSH tunnel of its own.
+mtxr.sqltools
+mtxr.sqltools-driver-pg
+ultram4rine.sqltools-clickhouse-driver
 # Databricks: bundles, notebooks, SQL.
 databricks.databricks
 

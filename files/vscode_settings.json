@@ -62,7 +62,9 @@
     "tamasfe.even-better-toml",
     "redhat.vscode-yaml",
     "eamodio.gitlens",
-    "dbcode.dbcode",
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg",
+    "ultram4rine.sqltools-clickhouse-driver",
     "sst-dev.opencode",
     "AmazonWebServices.aws-toolkit-vscode"
   ],
