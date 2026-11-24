@@ -106,6 +106,43 @@ address changes, run the deploy again.
 Known limit: the personal Naturalis key sits on this box. Ask infra for a dedicated
 read-only key and a longer-lived server profile, then replace both.
 
+## Log in the agent tools (AWS and Databricks)
+
+The aws and databricks MCP servers use browser logins. A login runs on the server as
+the agent user, and a browser on the laptop approves it. Do it in a tmux session so the
+prompt waits for you.
+
+AWS (the profile is default):
+
+```sh
+ssh me@briareus.dove-cobia.ts.net
+sudo -u agent -H tmux new-session -d -s awslogin 'env PATH=/home/linuxbrew/.linuxbrew/bin:/usr/bin:/bin aws login --remote; sleep 900'
+sudo -u agent -H tmux capture-pane -p -t awslogin -J      # shows the URL
+```
+
+Sign in through the myapps launcher, open the URL, then type the authorization code
+into the prompt with `sudo -u agent -H tmux send-keys -t awslogin '<code>' Enter`.
+
+Databricks (the callback port is 8020 on the machine that runs the CLI, so forward it
+from the laptop first):
+
+```sh
+ssh -f -N -L 8020:localhost:8020 briareus-agent
+ssh briareus-agent 'databricks auth login --profile development'   # prints the URL
+```
+
+Do not set BROWSER=true: the CLI then prints no URL. The server `~/.databrickscfg`
+must say `auth_storage = plaintext`, because the macOS value `secure` needs a keyring
+that the server does not have. The token then sits in `~/.databricks/token-cache.json`
+with mode 0600.
+
+After a login, restart opencode once so the MCP servers reconnect. A failed MCP server is
+not retried by itself. Restart only when no session is busy.
+
+Known limit: an AWS login session ends. The access token lasts minutes and a refresh
+token renews it, but the refresh token has a limit that was not measured yet. Note the
+date of each login and the first date that aws failed, then write the length here.
+
 ## One writer for the OpenCode config
 
 `opencode-sync` writes `/etc/opencode/opencode.jsonc` and `AGENTS.md` from git main.
