@@ -259,19 +259,34 @@ files.put(
 # and its tools never see the function.
 _vscode_server = f"/home/{AGENT_USER}/.vscode-server"
 
-files.block(
-    name="Make a bare opencode join the shared server in the agent shell",
-    path=f"/home/{AGENT_USER}/.bashrc",
-    content=(
+# The function lives in its own file, which is written as it is. A block written into
+# ~/.bashrc would have its dollar signs expanded by the shell during the write.
+files.put(
+    name="Write the opencode shell function for the agent user",
+    src=io.StringIO(
+        "# Managed by the homelab deploy. Sourced from ~/.bashrc.\n"
+        "# A bare opencode joins the shared server. Commands with arguments run unchanged.\n"
         "opencode() {\n"
         '    if [ "$#" -eq 0 ]; then\n'
         "        oc\n"
         "    else\n"
-        '        command opencode "$@"\n'
+        '        PATH="/home/linuxbrew/.linuxbrew/bin:$PATH" command opencode "$@"\n'
         "    fi\n"
         "}\n"
     ),
-    # No parentheses or other regex characters in the marker, or the block is appended on every run.
+    dest=f"/home/{AGENT_USER}/.config/opencode-shell.sh",
+    user=AGENT_USER,
+    group=AGENT_USER,
+    mode="0644",
+    _sudo=True,
+)
+
+# No dollar signs in this block, for the same reason. No parentheses or other regex
+# characters in the marker, or the block is appended on every run.
+files.block(
+    name="Source the opencode shell function in the agent bashrc",
+    path=f"/home/{AGENT_USER}/.bashrc",
+    content=f"[ -r /home/{AGENT_USER}/.config/opencode-shell.sh ] && . /home/{AGENT_USER}/.config/opencode-shell.sh\n",
     marker="# {mark} OPENCODE SHARED SERVER MANAGED BY PYINFRA",
     present=True,
     _sudo=True,
