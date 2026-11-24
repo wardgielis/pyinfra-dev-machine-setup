@@ -251,67 +251,41 @@ files.put(
     _sudo=True,
 )
 
-# VS Code Remote-SSH to the agent user: the OpenChamber extension attaches to the
-# OpenCode server on this host. The extension reads OPENCODE_PASSWORD from its
-# environment, and VS Code Server runs ~/.vscode-server/server-env-setup before it
-# starts. The script reads the password file, so the file itself holds no secret. Only
-# processes of the agent user get the variable, and the agent already holds it.
+# VS Code Remote-SSH to the agent user. The official OpenCode extension opens a terminal
+# and types a plain "opencode". A plain opencode starts the agent user's own background
+# service, which is a second server. This function makes a bare "opencode" join the shared
+# server like the oc helper does. Anything with arguments (auth, mcp, run) runs unchanged.
+# Debian's ~/.bashrc returns early for a non-interactive shell, so the OpenCode service
+# and its tools never see the function.
 _vscode_server = f"/home/{AGENT_USER}/.vscode-server"
 
-# Create each level by itself, so every folder belongs to the agent user. A single
-# directory call with sudo would leave the parents owned by root, and VS Code Server
-# could not write into them.
-for _level in ("", "/data"):
-    files.directory(
-        name=f"Create the VS Code Server folder {_vscode_server}{_level}",
-        path=f"{_vscode_server}{_level}",
-        user=AGENT_USER,
-        group=AGENT_USER,
-        mode="0755",
-        _sudo=True,
-    )
-
-files.directory(
-    name="Create the VS Code Server machine settings folder",
-    path=f"{_vscode_server}/data/Machine",
-    user=AGENT_USER,
-    group=AGENT_USER,
-    mode="0755",
-    _sudo=True,
-)
-
-files.put(
-    name="Write the VS Code Server environment script",
-    src=io.StringIO(
-        "# Managed by the homelab deploy. Sourced by VS Code Server before it starts.\n"
-        "# Homebrew is not on the PATH of a non-interactive SSH shell.\n"
-        'export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"\n'
-        'if [ -r "$HOME/.config/opencode-password" ]; then\n'
-        '    OPENCODE_PASSWORD="$(cat "$HOME/.config/opencode-password")"\n'
-        "    export OPENCODE_PASSWORD\n"
-        "fi\n"
-    ),
-    dest=f"{_vscode_server}/server-env-setup",
-    user=AGENT_USER,
-    group=AGENT_USER,
-    mode="0600",
-    _sudo=True,
-)
-
-files.put(
-    name="Write the VS Code Server machine settings",
-    src=io.StringIO(
-        "{\n"
-        '  "openchamber.apiUrl": "http://127.0.0.1:4096",\n'
-        '  "openchamber.opencodeBinary": "/home/linuxbrew/.linuxbrew/bin/opencode"\n'
+files.block(
+    name="Make a bare opencode join the shared server in the agent shell",
+    path=f"/home/{AGENT_USER}/.bashrc",
+    content=(
+        "opencode() {\n"
+        '    if [ "$#" -eq 0 ]; then\n'
+        "        oc\n"
+        "    else\n"
+        '        command opencode "$@"\n'
+        "    fi\n"
         "}\n"
     ),
-    dest=f"{_vscode_server}/data/Machine/settings.json",
-    user=AGENT_USER,
-    group=AGENT_USER,
-    mode="0644",
+    # No parentheses or other regex characters in the marker, or the block is appended on every run.
+    marker="# {mark} OPENCODE SHARED SERVER MANAGED BY PYINFRA",
+    present=True,
     _sudo=True,
+    _sudo_user=AGENT_USER,
 )
+
+# The OpenChamber trial wrote these two files. Remove them.
+for _leftover in (f"{_vscode_server}/server-env-setup", f"{_vscode_server}/data/Machine/settings.json"):
+    files.file(
+        name=f"Remove the OpenChamber trial file {_leftover}",
+        path=_leftover,
+        present=False,
+        _sudo=True,
+    )
 
 _secrets = files.put(
     name="Write the OpenCode environment file",

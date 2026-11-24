@@ -8,12 +8,10 @@
 # --- OpenCode ---
 # The official extension. It only opens the terminal client in the editor.
 sst-dev.opencode
-# OpenChamber: a full interface (sessions beside the code, selections to the agent,
-# diffs, parallel runs). MIT licence, public source, active. It attaches to an
-# external OpenCode server through openchamber.apiUrl. Checked on 2026-11-24: no
-# analytics hosts in the package, one update check to api.openchamber.dev. It is used in
-# the Remote-SSH window, see homelab/tasks/opencode.py for the server side.
-FedaykinDev.openchamber
+# Dropped after a trial on 2026-11-24: FedaykinDev.openchamber (OpenChamber). It is
+# MIT licensed and supports OpenCode 2, but it felt poor against the shared server,
+# and it is built around its own managed server. Use the OpenCode web UI or the
+# desktop app for a full interface. See the runbook.
 # Not installed on purpose: vyomeshupadhyay.vscode-opencode. It has no source
 # repository and it would hold the server password. Add it by hand only after you
 # have looked at its page.
