@@ -186,6 +186,7 @@ CLI_FORMULAE = [
     "atuin",      # Shell history
     "starship",   # Prompt (beautiful terminal!)
     "antidote",   # Plugin manager
+    "rsync",      # Faster file copy and mirroring over SSH
     # Terminal Image & Media Tools
     "viu",        # Rust-based image viewer (like 'cat' for images)
     "lsix",       # Grid-based 'ls' for images
@@ -204,6 +205,7 @@ CLI_FORMULAE = [
     "kubectx",     # Fast K8s context/namespace switching
     "kubectl",     # Kubernetes CLI
     "helm",        # Kubernetes package manager
+    "argocd",      # GitOps controller CLI (talks to the cluster from the shell)
     # Modern Text Editor
     "micro",  # nano replacement using nano as alias
     "duti",   # Set default apps for file types from the command line
@@ -376,6 +378,11 @@ def _preview_and_confirm():
         ["brew", "bundle", "cleanup", "--file=/tmp/pyinfra-managed-brewfile"]
     )
     print()
+    # Without a terminal there is nobody to answer, so keep the packages.
+    # This lets the deploy run from CI or a plain pipe.
+    if not sys.stdin.isatty():
+        print("No terminal: skipping removal, keeping drifted packages.")
+        return
     response = input("Proceed with removal? [y/N] ")
     _user_confirmed[0] = response.lower() == "y"
 
