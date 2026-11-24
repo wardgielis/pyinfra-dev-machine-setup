@@ -10,6 +10,9 @@
   },
   "clickhouse_development": {
     "type": "local",
+    // mcp-clickhouse 0.7.0 with mcp 2.3.0 serves only the 2026-07-28 revision, so a
+    // fresh environment fails the handshake probe. Pin the revision, as for aws.
+    "protocol": "2026-07-28",
     "command": ["uvx", "mcp-clickhouse"],
     "environment": {
       "CLICKHOUSE_HOST": "${CLICKHOUSE_DEV_HOST}",
@@ -23,6 +26,9 @@
   },
   "clickhouse_production": {
     "type": "local",
+    // mcp-clickhouse 0.7.0 with mcp 2.3.0 serves only the 2026-07-28 revision, so a
+    // fresh environment fails the handshake probe. Pin the revision, as for aws.
+    "protocol": "2026-07-28",
     "command": ["uvx", "mcp-clickhouse"],
     "environment": {
       "CLICKHOUSE_HOST": "127.0.0.1",
