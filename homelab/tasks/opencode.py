@@ -258,6 +258,19 @@ files.put(
 # processes of the agent user get the variable, and the agent already holds it.
 _vscode_server = f"/home/{AGENT_USER}/.vscode-server"
 
+# Create each level by itself, so every folder belongs to the agent user. A single
+# directory call with sudo would leave the parents owned by root, and VS Code Server
+# could not write into them.
+for _level in ("", "/data"):
+    files.directory(
+        name=f"Create the VS Code Server folder {_vscode_server}{_level}",
+        path=f"{_vscode_server}{_level}",
+        user=AGENT_USER,
+        group=AGENT_USER,
+        mode="0755",
+        _sudo=True,
+    )
+
 files.directory(
     name="Create the VS Code Server machine settings folder",
     path=f"{_vscode_server}/data/Machine",
