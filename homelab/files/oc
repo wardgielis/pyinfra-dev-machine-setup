@@ -7,6 +7,9 @@
 set -eu
 
 PASSWORD_FILE="$HOME/.config/opencode-password"
+# A non-interactive SSH shell does not have Homebrew on its PATH.
+PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+export PATH
 
 if [ ! -r "$PASSWORD_FILE" ]; then
     echo "oc: cannot read $PASSWORD_FILE, run the homelab deploy first" >&2
