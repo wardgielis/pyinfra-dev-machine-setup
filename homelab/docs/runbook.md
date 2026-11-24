@@ -130,11 +130,21 @@ The host entry names the Bitwarden SSH agent socket. A program that starts from 
 Dock does not read `.zshenv`, so without that line VS Code could not find the key.
 Bitwarden must be unlocked.
 
-Databases in the remote window: the ClickHouse tunnels already run on the server.
-Add a ClickHouse connection in DBCode with host `127.0.0.1`, port `8123` for
-production or `8124` for development, and the same accounts as the OpenCode MCP
-servers (they are in `homelab/.env`). The laptop VPN is not needed for that. Postgres
-hosts are not routed from the server, so use a local window with the VPN on for them.
+Databases in the remote window: the ClickHouse tunnels already run on the server, so do
+not add an SSH tunnel in DBCode there. Add a ClickHouse connection with host `127.0.0.1`,
+port `8123` for production or `8124` for development, SSH tunnel off, and the same
+accounts as the OpenCode MCP servers (they are in `homelab/.env`). The laptop VPN is not
+needed for that. Postgres hosts are not routed from the server, so use a local window
+with the VPN on for them.
+
+A DBCode SSH tunnel with agent login fails in the remote window with "Could not find the
+SSH_AUTH_SOCK environment variable". The server has no SSH agent on purpose, because agent
+forwarding is off. In a local window the same login would use the Apple agent, which has
+no Naturalis key, so use a private key file there: `~/.ssh/naturalis_work_pc`.
+
+DBCode saves its connections in the user `settings.json`. The deploy sets only the keys in
+`files/vscode_settings.json` and keeps everything else, so the connections stay. Comments
+in the live file are not kept.
 
 S3: the AWS Toolkit uses the profiles of the agent user in the remote window. It cannot
 open a cross-account bucket by name. Keep PyCharm with Big Data Tools for that until a

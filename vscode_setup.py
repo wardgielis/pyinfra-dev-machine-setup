@@ -11,7 +11,9 @@ What it does:
 - Installs the visual-studio-code cask.
 - Installs the extensions in files/vscode_extensions.txt that are missing. It never
   removes an extension that you added by hand.
-- Writes the user settings from files/vscode_settings.json.
+- Sets the user settings from files/vscode_settings.json. Only those keys are set.
+  Everything else in the live file stays, such as the database connections that DBCode
+  saves there. Comments in the live file are not kept.
 - Keeps a managed block in ~/.ssh/config for the homelab agent host. The block names
   the Bitwarden SSH agent socket. A program that starts from the Dock does not read
   .zshenv, so without the socket VS Code could not find the SSH key.
@@ -19,8 +21,11 @@ What it does:
 VSCodium stays installed and is not touched here.
 """
 
+import io
+import json
 import os
 import pathlib
+import re
 import subprocess
 
 from pyinfra.operations import brew, files, server
@@ -62,6 +67,38 @@ def read_extension_ids() -> list[str]:
         if line and not line.startswith("#"):
             ids.append(line)
     return ids
+
+
+def merged_settings() -> str:
+    """Build the settings file text: the live file with the managed keys set.
+
+    VS Code and some extensions (DBCode saves its connections here) write into the
+    user settings file, so replacing the whole file would delete their data. This
+    keeps every key that the repo file does not name and sets the ones it does.
+
+    Returns:
+        The settings text, ending with a newline.
+
+    Raises:
+        SystemExit: When the live file exists but cannot be read as JSON. Nothing is
+            written then, so a file with a typo is never destroyed.
+    """
+
+    def parse(text: str) -> dict:
+        # Only full-line comments are removed, so a URL inside a string stays intact.
+        return json.loads(re.sub(r"(?m)^\s*//.*$", "", text))
+
+    managed = parse(SETTINGS_FILE.read_text(encoding="utf-8"))
+    live: dict = {}
+    if os.path.exists(SETTINGS_DEST):
+        text = pathlib.Path(SETTINGS_DEST).read_text(encoding="utf-8")
+        if text.strip():
+            try:
+                live = parse(text)
+            except ValueError as error:
+                raise SystemExit(f"{SETTINGS_DEST} is not valid JSON ({error}). Fix it, then run again.") from error
+    live.update(managed)
+    return json.dumps(live, indent=2, ensure_ascii=False) + "\n"
 
 
 def find_code_cli() -> str | None:
@@ -145,8 +182,8 @@ files.directory(
 )
 
 files.put(
-    name="Sync the VS Code settings",
-    src=str(SETTINGS_FILE),
+    name="Set the managed VS Code settings and keep the rest",
+    src=io.StringIO(merged_settings()),
     dest=SETTINGS_DEST,
 )
 
