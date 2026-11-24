@@ -230,6 +230,27 @@ files.put(
     _sudo=True,
 )
 
+# The oc helper joins the server from an SSH or VS Code remote shell as the agent
+# user. The agent already holds this password in its own environment, so a file in
+# its home adds no new access.
+files.put(
+    name="Install the oc helper",
+    src="files/oc",
+    dest="/usr/local/bin/oc",
+    mode="0755",
+    _sudo=True,
+)
+
+files.put(
+    name="Write the agent password file for oc",
+    src=io.StringIO(os.environ.get("OPENCODE_PASSWORD", "") + "\n"),
+    dest=f"/home/{AGENT_USER}/.config/opencode-password",
+    user=AGENT_USER,
+    group=AGENT_USER,
+    mode="0600",
+    _sudo=True,
+)
+
 _secrets = files.put(
     name="Write the OpenCode environment file",
     src=io.StringIO("\n".join(_secret_lines) + "\n"),

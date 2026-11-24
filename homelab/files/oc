@@ -1,0 +1,18 @@
+#!/bin/sh
+# Open the OpenCode terminal client against the server on this host.
+#
+# Use it in an SSH shell or in the VS Code remote terminal as the agent user. It joins
+# the same server and the same sessions as the phone app and the laptop. The password
+# comes from a file that only the agent user can read, and it is never printed.
+set -eu
+
+PASSWORD_FILE="$HOME/.config/opencode-password"
+
+if [ ! -r "$PASSWORD_FILE" ]; then
+    echo "oc: cannot read $PASSWORD_FILE, run the homelab deploy first" >&2
+    exit 1
+fi
+
+OPENCODE_PASSWORD="$(cat "$PASSWORD_FILE")"
+export OPENCODE_PASSWORD
+exec opencode --server http://127.0.0.1:4096 "$@"
