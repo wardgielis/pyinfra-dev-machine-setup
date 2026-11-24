@@ -137,8 +137,9 @@ homelab deploy writes two ready connections into the server's machine settings
 (`~/.vscode-server/data/Machine/settings.json`): "ClickHouse production (server tunnel)" on
 `127.0.0.1:8123` and "ClickHouse development (server tunnel)" on `127.0.0.1:8124`. They
 use the same accounts as the OpenCode MCP servers, and SQLTools asks for the password when
-you connect. The laptop VPN is not needed for that. Those accounts can write, so treat
-every statement that changes data as your own decision. Postgres hosts are not routed
+you connect. The laptop VPN is not needed for that. The production account is named
+`readonly` in the OpenCode MCP config. The development account can write, so treat every
+statement that changes development data as your own decision. Postgres hosts are not routed
 from the server, so use a local window with the VPN on for them. SQLTools has no SSH tunnel
 of its own, so in a local window start a tunnel with `ssh -L` first.
 
