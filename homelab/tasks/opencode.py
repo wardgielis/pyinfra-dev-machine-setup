@@ -251,6 +251,55 @@ files.put(
     _sudo=True,
 )
 
+# VS Code Remote-SSH to the agent user: the OpenChamber extension attaches to the
+# OpenCode server on this host. The extension reads OPENCODE_PASSWORD from its
+# environment, and VS Code Server runs ~/.vscode-server/server-env-setup before it
+# starts. The script reads the password file, so the file itself holds no secret. Only
+# processes of the agent user get the variable, and the agent already holds it.
+_vscode_server = f"/home/{AGENT_USER}/.vscode-server"
+
+files.directory(
+    name="Create the VS Code Server machine settings folder",
+    path=f"{_vscode_server}/data/Machine",
+    user=AGENT_USER,
+    group=AGENT_USER,
+    mode="0755",
+    _sudo=True,
+)
+
+files.put(
+    name="Write the VS Code Server environment script",
+    src=io.StringIO(
+        "# Managed by the homelab deploy. Sourced by VS Code Server before it starts.\n"
+        "# Homebrew is not on the PATH of a non-interactive SSH shell.\n"
+        'export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"\n'
+        'if [ -r "$HOME/.config/opencode-password" ]; then\n'
+        '    OPENCODE_PASSWORD="$(cat "$HOME/.config/opencode-password")"\n'
+        "    export OPENCODE_PASSWORD\n"
+        "fi\n"
+    ),
+    dest=f"{_vscode_server}/server-env-setup",
+    user=AGENT_USER,
+    group=AGENT_USER,
+    mode="0600",
+    _sudo=True,
+)
+
+files.put(
+    name="Write the VS Code Server machine settings",
+    src=io.StringIO(
+        "{\n"
+        '  "openchamber.apiUrl": "http://127.0.0.1:4096",\n'
+        '  "openchamber.opencodeBinary": "/home/linuxbrew/.linuxbrew/bin/opencode"\n'
+        "}\n"
+    ),
+    dest=f"{_vscode_server}/data/Machine/settings.json",
+    user=AGENT_USER,
+    group=AGENT_USER,
+    mode="0644",
+    _sudo=True,
+)
+
 _secrets = files.put(
     name="Write the OpenCode environment file",
     src=io.StringIO("\n".join(_secret_lines) + "\n"),

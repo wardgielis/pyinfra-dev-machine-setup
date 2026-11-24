@@ -63,7 +63,8 @@
     "redhat.vscode-yaml",
     "eamodio.gitlens",
     "dbcode.dbcode",
-    "sst-dev.opencode"
+    "sst-dev.opencode",
+    "FedaykinDev.openchamber"
   ],
   "remote.SSH.connectTimeout": 30,
   "remote.SSH.showLoginTerminal": false
