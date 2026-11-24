@@ -1,0 +1,43 @@
+#!/bin/bash
+# Check the eduVPN link, the ClickHouse tunnels and the age of the VPN profile.
+#
+# Runs as root from naturalis-check.timer. On a problem it posts to the
+# Healthchecks.io /fail URL through homelab-notify and writes a journal line.
+# eduVPN sessions end after a fixed time, and renewing needs a person in a browser,
+# so the warning comes several days before the end.
+set -u
+
+. /etc/homelab/naturalis.env
+
+problems=""
+add() { problems="${problems:+$problems; }$1"; }
+
+# 1. WireGuard needs a recent handshake. The profile sets a keepalive, so a healthy
+# link shows one within a few minutes.
+handshake=$(wg show "$VPN_NAME" latest-handshakes 2>/dev/null | awk 'NR==1 {print $2}')
+now=$(date +%s)
+if [ -z "${handshake:-}" ] || [ "$handshake" = 0 ] || [ $((now - handshake)) -gt 300 ]; then
+    add "eduVPN has no recent handshake"
+fi
+
+# 2. Both tunnels must reach ClickHouse. /ping answers Ok. when the server is up.
+for port in 8123 8124; do
+    if ! curl --fail --silent --max-time 8 "http://127.0.0.1:${port}/ping" >/dev/null; then
+        add "ClickHouse tunnel on port ${port} does not answer"
+    fi
+done
+
+# 3. Warn before the profile ends.
+expires_epoch=$(date -d "$EXPIRES" +%s 2>/dev/null || echo 0)
+days_left=$(( (expires_epoch - now) / 86400 ))
+if [ "$days_left" -le "$WARN_DAYS" ]; then
+    add "eduVPN profile ends in ${days_left} days, renew it at https://naturalis.eduvpn.nl/"
+fi
+
+if [ -n "$problems" ]; then
+    logger -t naturalis-check "$problems"
+    /usr/local/bin/homelab-notify "naturalis-check: $problems"
+    exit 1
+fi
+
+exit 0

@@ -40,6 +40,9 @@ TOOLS = [
     "btop",
     # Jira CLI for the agent. Its settings come from the agent's config file.
     "jira-cli",
+    # The AWS and Databricks MCP servers sign in through these two CLIs.
+    "awscli",
+    "databricks",
 ]
 
 # The opencode formula from Homebrew core conflicts with the v2 formula from the
@@ -127,6 +130,15 @@ server.shell(
     commands=["brew trust anomalyco/tap || true"],
     _env=BREW_ENV,
     _if=lambda: _tap.did_change(),
+)
+
+_databricks_tap = brew.tap(name="Tap Databricks", src="databricks/tap")
+
+server.shell(
+    name="Trust the Databricks tap",
+    commands=["brew trust databricks/tap || true"],
+    _env=BREW_ENV,
+    _if=lambda: _databricks_tap.did_change(),
 )
 
 _core_opencode = host.get_fact(

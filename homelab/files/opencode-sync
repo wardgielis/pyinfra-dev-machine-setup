@@ -1,14 +1,21 @@
 #!/bin/sh
-# Pull the homelab repository and sync the OpenCode config and skills.
+# Pull the homelab repository and sync the OpenCode config, AGENTS.md and skills.
 #
-# Runs as root from opencode-sync.timer. It never restarts the OpenCode unit: a
-# restart kills the running session, so the restart stays a human decision.
+# This script is the only writer of /etc/opencode/opencode.jsonc and
+# /etc/opencode/AGENTS.md. It runs as root from opencode-sync.timer and from the
+# deploy. It never restarts the OpenCode unit: a restart kills the running
+# session, so the restart stays a human decision.
 set -eu
 
 REPO=/srv/opencode-src
 SKILLS_SRC="$REPO/opencode-config/skills"
 SKILLS_DEST=/opt/opencode-skills
-CONFIG=/etc/opencode/opencode.jsonc
+CONFIG_DIR=/etc/opencode
+CONFIG="$CONFIG_DIR/opencode.jsonc"
+AGENTS="$CONFIG_DIR/AGENTS.md"
+# Skills that git does not hold. The deploy writes this list, one name per line,
+# each with a trailing slash. Without it a --delete would remove the private skills.
+PRIVATE_LIST="$CONFIG_DIR/private-skills.list"
 MARKER=/run/opencode-config-pending
 
 notify_fail() {
@@ -31,29 +38,38 @@ if ! git -C "$REPO" pull --ff-only --quiet origin main; then
     exit 1
 fi
 
-# The clone only holds tracked files, so the gitignored org skills never arrive this
-# way. Their copies on the server are excluded here, so --delete leaves them alone.
-# pycharm needs the IDE MCP server, so skip it.
-rsync -a --delete \
-    --exclude 'pycharm/' \
-    --exclude 'aws-cli/' \
-    --exclude 'biocloud-databricks/' \
-    --exclude 'biocloud-pyinfra/' \
-    --exclude 'naturalis-kubernetes/' \
-    --exclude 'naturalis-opentofu/' \
-    --exclude 'naturalis-terraform-pitfalls/' \
-    "$SKILLS_SRC/" "$SKILLS_DEST/"
-
-_tmp=$(mktemp)
-trap 'rm -f "$_tmp"' EXIT
-
-if ! python3 "$REPO/scripts/opencode_config.py" --target server --out "$_tmp"; then
-    notify_fail "config render failed"
+if [ ! -r "$PRIVATE_LIST" ]; then
+    notify_fail "missing $PRIVATE_LIST, skills not synced"
+    echo "missing $PRIVATE_LIST, run the deploy first" >&2
     exit 1
 fi
 
-if ! cmp -s "$_tmp" "$CONFIG"; then
-    install -m 0644 -o root -g root "$_tmp" "$CONFIG"
+mkdir -p "$SKILLS_DEST"
+rsync -a --delete --exclude-from="$PRIVATE_LIST" "$SKILLS_SRC/" "$SKILLS_DEST/"
+
+_dir=$(mktemp -d)
+trap 'rm -rf "$_dir"' EXIT
+
+if ! python3 "$REPO/scripts/opencode_config.py" --target server --out "$_dir/opencode.jsonc"; then
+    notify_fail "config render failed"
+    exit 1
+fi
+if ! python3 "$REPO/scripts/opencode_config.py" --target server --kind agents --out "$_dir/AGENTS.md"; then
+    notify_fail "AGENTS.md render failed"
+    exit 1
+fi
+
+_changed=0
+for _pair in "$_dir/opencode.jsonc:$CONFIG" "$_dir/AGENTS.md:$AGENTS"; do
+    _new=${_pair%%:*}
+    _target=${_pair#*:}
+    if ! cmp -s "$_new" "$_target"; then
+        install -m 0644 -o root -g root "$_new" "$_target"
+        _changed=1
+    fi
+done
+
+if [ "$_changed" = 1 ]; then
     touch "$MARKER"
     logger -t opencode-sync "config differs from git, restart the service to apply"
 fi

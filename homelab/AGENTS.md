@@ -28,6 +28,9 @@ These rules apply to every file under `homelab/`.
 - Chart versions live in `homelab/k8s/apps/`, not in `versions.py`.
 - Set `_env` with the Homebrew PATH on every operation that calls `brew`, `helm`
   or `kubectl`. Non-interactive SSH shells do not have `brew` on PATH.
+- `opencode-sync` on the server is the only writer of `/etc/opencode/opencode.jsonc`
+  and `AGENTS.md`. The deploy runs it and refuses to start when the config files
+  differ from `origin/main`. Never add a `files.put` for those two files.
 - Keep the shared OpenCode config in one file. Both targets render
   `files/opencode_config.jsonc`; only the MCP block and the skills path differ.
 
@@ -36,6 +39,9 @@ These rules apply to every file under `homelab/`.
 - The repository is public. No secret goes into git, ever. Only
   `homelab/.env` may hold one.
 - The agent user has no sudo and no repository write key. Do not add one.
+- The agent user holds no SSH key. The personal Naturalis key belongs to the
+  `chtunnel` user, which runs the ClickHouse tunnels. Keys never go into the restic
+  backup.
 - The systemd sandbox in `files/opencode.service.j2` is the security boundary for
   the agent. The permission policy is not.
 

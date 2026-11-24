@@ -63,6 +63,75 @@ sudo rm -f /run/opencode-config-pending
 A new session picks up a changed skill file without a restart. A changed
 opencode.jsonc needs the restart.
 
+## Naturalis VPN and ClickHouse tunnels
+
+Two ClickHouse MCP servers need the Naturalis eduVPN link and an SSH tunnel. The
+laptop reaches production through its own tunnel script. The server uses these parts:
+
+- `wg-quick@naturalis`: a WireGuard profile from https://naturalis.eduvpn.nl/. The
+  deploy changes it to a split tunnel. Only the two ClickHouse addresses are routed,
+  and the DNS line is removed. Never use a full tunnel, because it would cut off
+  Tailscale and SSH.
+- `chtunnel-prod` and `chtunnel-dev`: SSH tunnels run by the user `chtunnel`, which
+  holds the personal Naturalis key. Production listens on 127.0.0.1:8123 and
+  development on 127.0.0.1:8124. The OpenCode agent can use the ports and cannot read
+  the key.
+- `naturalis-check.timer`: every hour it checks the VPN handshake, both tunnels and
+  the profile age. A problem posts to Healthchecks.io.
+
+Set up or renew the profile (a person must do this about every 90 days):
+
+1. Log in at https://naturalis.eduvpn.nl/ and download a WireGuard profile for this
+   server. Each device needs its own profile.
+2. Save it outside the repo with mode 0600. Put the path in `homelab/.env` as
+   `WIREGUARD_PROFILE`.
+3. Run `PHASE=naturalis uv run pyinfra inventory.py deploy.py` from `homelab/`.
+
+The expiry date is the file date of the profile plus `WIREGUARD_PROFILE_DAYS`
+(default 90). The check warns 7 days before.
+
+Checks on the server:
+
+```sh
+sudo wg show naturalis
+systemctl status chtunnel-prod chtunnel-dev
+curl -s http://127.0.0.1:8123/ping     # prints Ok.
+```
+
+The deploy resolves the two host names when it writes the profile. If a ClickHouse
+address changes, run the deploy again.
+
+Known limit: the personal Naturalis key sits on this box. Ask infra for a dedicated
+read-only key and a longer-lived server profile, then replace both.
+
+## One writer for the OpenCode config
+
+`opencode-sync` writes `/etc/opencode/opencode.jsonc` and `AGENTS.md` from git main.
+The deploy runs it once. The deploy stops with an error when `files/`,
+`homelab/files/`, `scripts/` or `opencode-config/` differ from `origin/main`, so
+commit and push first. `ALLOW_UNPUSHED=1` overrides this for a dry run of local work.
+
+The server restarts only when the unit or the secrets changed, or when the sync left
+`/run/opencode-config-pending`. The second case ends running sessions, so deploy when
+the server is idle.
+
+Accepted exceptions to the guard rule for `server.shell`: the sync run and the
+marker-based restart always report a change. Their commands do nothing when there
+is nothing to do.
+
+The private skills (the ones git does not hold) are copied by the deploy and listed
+in `/etc/opencode/private-skills.list`. The sync reads that list, so it never deletes
+them.
+
+## Check that the server matches the laptop
+
+```sh
+python3 scripts/parity_check.py
+```
+
+It compares the skill names, the MCP names, the config hash and the AGENTS core hash
+between the laptop and the server, and prints every difference.
+
 ## Stop the server for a while
 
 ```sh
@@ -99,7 +168,8 @@ opencode-remote                     # uses https://briareus.dove-cobia.ts.net:84
 OPENCODE_SERVER_URL=https://other:8443 opencode-remote   # another server
 ```
 
-It needs the Tailscale app connected. The client asks for the password on first use.
+It needs the Tailscale app connected. The function reads the password from
+`homelab/.env` for that one command and never prints it.
 
 ## Restore from backup
 

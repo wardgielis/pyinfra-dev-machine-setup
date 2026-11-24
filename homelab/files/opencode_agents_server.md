@@ -16,6 +16,14 @@ as the user `agent`, without sudo, inside a systemd sandbox.
 
 - The LAN and the cluster address ranges are blocked. Loopback and the internet work.
 - The resolver is the router.
+- The Naturalis ClickHouse servers are reached through local tunnels. Production is on
+  127.0.0.1:8123 and development is on 127.0.0.1:8124. The tunnels need the Naturalis
+  eduVPN link, which a person must renew about every 90 days. When a ClickHouse tool
+  fails, report that the link or a tunnel may be down. Do not try to restart it.
+- You hold no SSH key. The Naturalis key belongs to a separate user that you cannot
+  read. Do not look for it and do not ask for it.
+- The ClickHouse tools use the same accounts and the same write rights as on the
+  owner's laptop. Treat every statement that changes data as the owner's decision.
 
 ### Tokens and git
 

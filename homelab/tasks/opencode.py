@@ -21,6 +21,39 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 import opencode_config  # noqa: E402
 
+# Paths that decide what the server renders. The sync on the server reads them from
+# git, so the deploy must not run while they differ from origin/main.
+RENDER_PATHS = ["files", "homelab/files", "scripts", "opencode-config"]
+
+
+def _assert_pushed() -> None:
+    """Stop the deploy when the server would render something different from git.
+
+    The server config is written by opencode-sync from the main branch. A change
+    that is only on this laptop would be missed or half applied, so refuse to run.
+    Set ALLOW_UNPUSHED=1 to override, for example for a dry run of local work.
+    """
+    if os.environ.get("ALLOW_UNPUSHED") == "1":
+        logger.warning("ALLOW_UNPUSHED=1: the server config may differ from this working tree.")
+        return
+
+    git = ["git", "-C", str(REPO)]
+    subprocess.run([*git, "fetch", "--quiet", "origin", "main"], check=False)
+    unpushed = subprocess.run(
+        [*git, "diff", "--quiet", "origin/main", "HEAD", "--", *RENDER_PATHS], check=False
+    ).returncode
+    dirty = subprocess.run(
+        [*git, "status", "--porcelain", "--", *RENDER_PATHS], capture_output=True, text=True, check=False
+    ).stdout.strip()
+    if unpushed or dirty:
+        raise SystemExit(
+            "The config files differ from origin/main. Commit and push them first, "
+            "because the server renders its config from git. Details:\n" + (dirty or "unpushed commits")
+        )
+
+
+_assert_pushed()
+
 ADMIN_USER = host.data.admin_user
 AGENT_USER = host.data.agent_user
 LAN_SUBNET = host.data.lan_subnet
@@ -102,12 +135,13 @@ if SKILLS_SRC.is_dir():
     )
 else:
     logger.warning("No skills source at %s. Skipping the skill sync.", SKILLS_SRC)
+    _ignored_dirs = []
 
+# The private skills exist only on the laptop disk, so git never holds them. Copy
+# each one by itself, so the tracked sync above and the daily sync on the server
+# never delete them. The list file tells the server sync which names to leave alone.
+_private_skills = sorted(_ignored_dirs)
 
-# ------------------------------------------------------------
-# 3. Config
-# One template for both targets. Only the MCP block and the skills path differ.
-# ------------------------------------------------------------
 files.directory(
     name="Create the system config folder",
     path=CONFIG_DIR,
@@ -115,19 +149,37 @@ files.directory(
     _sudo=True,
 )
 
-_config = files.put(
-    name="Render the server OpenCode config",
-    src=io.StringIO(opencode_config.render("server")),
-    dest=f"{CONFIG_DIR}/opencode.jsonc",
+files.put(
+    name="Write the private skills list for the server sync",
+    src=io.StringIO("".join(f"{name}/\n" for name in [*DENIED_SKILLS, *_private_skills])),
+    dest=f"{CONFIG_DIR}/private-skills.list",
     mode="0644",
     _sudo=True,
 )
 
-_agents = files.put(
-    name="Write the server AGENTS.md",
-    src=io.StringIO(opencode_config.render_agents("server")),
-    dest=f"{CONFIG_DIR}/AGENTS.md",
-    mode="0644",
+for _skill in _private_skills:
+    files.sync(
+        name=f"Copy the private skill {_skill}",
+        src=str(SKILLS_SRC / _skill),
+        dest=f"{SKILLS_DEST}/{_skill}",
+        delete=True,
+        exclude=["*.pyc", ".DS_Store"],
+        exclude_dir=["__pycache__"],
+        mode="644",
+        dir_mode="755",
+        _sudo=True,
+    )
+
+
+# ------------------------------------------------------------
+# 3. Config
+# opencode-sync is the only writer of opencode.jsonc and AGENTS.md. It renders both
+# from git main. The deploy runs it once, and stops earlier when the working tree
+# is not pushed (see _assert_pushed).
+# ------------------------------------------------------------
+server.shell(
+    name="Run opencode-sync to write the config from git",
+    commands=["test -x /usr/local/bin/opencode-sync || { echo 'opencode-sync is missing, run PHASE=sync first' >&2; exit 1; }", "/usr/local/bin/opencode-sync"],
     _sudo=True,
 )
 
@@ -141,15 +193,10 @@ if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
     _secret_lines.append(f"CLAUDE_CODE_OAUTH_TOKEN={os.environ['CLAUDE_CODE_OAUTH_TOKEN']}")
 
 # MCP values, referenced from the server config as {env:NAME}. They sit here, not in
-# the root-owned config file, which the agent can read.
-for _mcp_var in (
-    "GRAFANA_URL",
-    "GRAFANA_SERVICE_ACCOUNT_TOKEN",
-    "ARGOCD_BASE_URL",
-    "ARGOCD_API_TOKEN",
-    "GITLAB_TOKEN",
-    "JIRA_API_TOKEN",
-):
+# the root-owned config file, which the agent can read. The list comes from
+# scripts/opencode_config.py, and CI fails when the config names a variable that
+# is missing from it.
+for _mcp_var in opencode_config.SERVER_ENV_VARIABLES:
     _secret_lines.append(f"{_mcp_var}={os.environ.get(_mcp_var, '')}")
 
 files.directory(
@@ -214,9 +261,14 @@ systemd.service(
     _sudo=True,
 )
 
-# A restart kills a running session, so only reload and restart when something
-# changed. The deploy is a chosen time; the daily sync never restarts.
-_changed = any_changed(_unit, _config, _agents, _secrets)
+# A restart kills a running session, so only restart when something changed. The
+# deploy is a chosen time; the daily sync never restarts. Two reasons to restart:
+# the unit or the secrets changed (pyinfra knows), or the sync staged a new config
+# (it leaves a marker file). The first restart removes the marker, so the second
+# check does not restart again.
+# Accepted exception to the guard rule: a server.shell always reports a change, but
+# its command only restarts when the marker exists.
+_changed = any_changed(_unit, _secrets)
 
 systemd.daemon_reload(
     name="Reload systemd after the opencode unit change",
@@ -224,11 +276,19 @@ systemd.daemon_reload(
     _sudo=True,
 )
 
-systemd.service(
-    name="Restart opencode after a config change",
-    service="opencode",
-    restarted=True,
+server.shell(
+    name="Restart opencode after a unit or secrets change",
+    commands=["systemctl restart opencode", "rm -f /run/opencode-config-pending"],
     _if=_changed,
+    _sudo=True,
+)
+
+server.shell(
+    name="Restart opencode when the sync staged a config change",
+    commands=[
+        "if [ -e /run/opencode-config-pending ]; then "
+        "systemctl restart opencode && rm -f /run/opencode-config-pending; fi"
+    ],
     _sudo=True,
 )
 

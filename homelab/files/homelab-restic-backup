@@ -7,8 +7,12 @@ set -eu
 
 . /etc/restic/restic.env
 
+# Keys never leave the box. The agent home has no keys today, but the exclude keeps
+# it that way if one is added later. /var/lib/chtunnel is not listed at all.
 /usr/bin/restic backup \
     --host briareus \
+    --exclude '.ssh' \
+    --exclude 'id_*' \
     /home/agent/dev \
     /home/agent/.local/share/opencode \
     /etc/opencode \

@@ -31,15 +31,16 @@ SECTIONS = (
     "shell",      # phase 3: fastfetch hook
     "homebrew",   # phase 4: brew, tools, coding agents
     "tailscale",  # phase 5: tailnet and serve
-    "opencode",   # phase 6: service, config, Claude Code
-    "sync",       # phase 6b: daily pull from git
+    "sync",       # phase 6b: clone, sync script and timer. Before opencode, which runs the script.
+    "opencode",   # phase 6: service, secrets, restart
+    "naturalis",  # parity step 5: eduVPN profile, ClickHouse tunnels
     "backup",     # phase 6 and 10: restic
     "k3s",        # phase 7: v2
     "argocd",     # phase 8: v2
 )
 
 GROUPS = {
-    "v1": ("base", "shell", "homebrew", "tailscale", "opencode", "sync", "backup"),
+    "v1": ("base", "shell", "homebrew", "tailscale", "sync", "opencode", "naturalis", "backup"),
     "v2": ("k3s", "argocd", "backup"),
     "all": SECTIONS,
 }
@@ -88,42 +89,51 @@ if "tailscale" in _enabled:
 
 
 # ============================================================
-# SECTION 5: OPENCODE SERVER (phase 6)
-# ============================================================
-if "opencode" in _enabled:
-    local.include("tasks/opencode.py")
-
-
-# ============================================================
-# SECTION 6: DAILY SYNC FROM GIT (phase 6b)
+# SECTION 5: DAILY SYNC FROM GIT (phase 6b)
+# Runs before the opencode section, which calls the sync script.
 # ============================================================
 if "sync" in _enabled:
     local.include("tasks/opencode_sync.py")
 
 
 # ============================================================
-# SECTION 7: BACKUPS (phase 6 and 10)
+# SECTION 6: OPENCODE SERVER (phase 6)
+# ============================================================
+if "opencode" in _enabled:
+    local.include("tasks/opencode.py")
+
+
+# ============================================================
+# SECTION 7: NATURALIS ACCESS (parity step 5)
+# ============================================================
+if "naturalis" in _enabled:
+    local.include("tasks/naturalis.py")
+
+
+# ============================================================
+# SECTION 8: BACKUPS (phase 6 and 10)
 # ============================================================
 if "backup" in _enabled:
     local.include("tasks/backup.py")
 
 
+
 # ============================================================
-# SECTION 8: K3S (phase 7, v2)
+# SECTION 9: K3S (phase 7, v2)
 # ============================================================
 if "k3s" in _enabled:
     local.include("tasks/k3s.py")
 
 
 # ============================================================
-# SECTION 9: ARGO CD (phase 8, v2)
+# SECTION 10: ARGO CD (phase 8, v2)
 # ============================================================
 if "argocd" in _enabled:
     local.include("tasks/argocd.py")
 
 
 # ============================================================
-# SECTION 10: WHAT A HUMAN STILL HAS TO DO
+# SECTION 11: WHAT A HUMAN STILL HAS TO DO
 # ============================================================
 def _print_manual_steps() -> None:
     print(

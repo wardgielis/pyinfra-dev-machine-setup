@@ -45,6 +45,20 @@ if _owner.strip() not in ("", "root"):
 # ------------------------------------------------------------
 # 2. The sync script and the pending-change notice
 # ------------------------------------------------------------
+files.directory(
+    name="Create the system config folder for the sync",
+    path="/etc/opencode",
+    mode="0755",
+    _sudo=True,
+)
+
+files.directory(
+    name="Create the skills folder for the sync",
+    path="/opt/opencode-skills",
+    mode="0755",
+    _sudo=True,
+)
+
 files.put(
     name="Install the opencode-sync script",
     src="files/opencode-sync",
