@@ -20,6 +20,9 @@
   "opentofu": { "type": "remote", "url": "https://mcp.opentofu.org/mcp" },
   "aws": {
     "type": "local",
+    // The AWS MCP server speaks only the 2026-07-28 revision and rejects the
+    // initialize handshake. Pin the revision so opencode skips the probe.
+    "protocol": "2026-07-28",
     "command": ["uvx", "mcp-proxy-for-aws@latest", "https://aws-mcp.us-east-1.api.aws/mcp", "--region", "eu-west-1"]
   },
   "databricks": {
