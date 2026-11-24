@@ -4,8 +4,9 @@ The ClickHouse hosts accept SSH from the Naturalis eduVPN range only, and they
 accept ClickHouse traffic from nowhere over the VPN, so a tunnel is needed.
 
 Design:
-- The VPN is a WireGuard profile from https://naturalis.eduvpn.nl/, run by
-  wg-quick@naturalis. The deploy rewrites it to a split tunnel: only the two
+- The VPN is a profile from https://naturalis.eduvpn.nl/. Both kinds work: an
+  OpenVPN file (.ovpn, run by openvpn-client@naturalis) or a WireGuard file (.conf,
+  run by wg-quick@naturalis). The deploy rewrites it to a split tunnel: only the two
   ClickHouse addresses are routed. A full tunnel would cut off Tailscale and SSH.
 - A separate system user, chtunnel, holds the personal Naturalis SSH key and runs
   the two tunnel units. The OpenCode agent only sees 127.0.0.1:8123 and :8124 and
@@ -40,18 +41,25 @@ TUNNELS = [
 ]
 
 # eduVPN sessions last 90 days by default. The check warns this many days before.
-PROFILE_DAYS = int(os.environ.get("WIREGUARD_PROFILE_DAYS", "90"))
+# An OpenVPN profile carries its own end date in the client certificate, so this
+# value is only the fallback for a WireGuard profile.
+PROFILE_DAYS = int(os.environ.get("VPN_PROFILE_DAYS") or os.environ.get("WIREGUARD_PROFILE_DAYS") or "90")
 WARN_DAYS = 7
 
 # wg-quick runs these as root, so a profile that holds one is refused.
 FORBIDDEN_KEYS = {"preup", "postup", "predown", "postdown", "saveconfig"}
 
+# OpenVPN directives that run programs or load code. A profile that holds one is
+# refused, because the service runs as root.
+FORBIDDEN_OPENVPN = {
+    "script-security", "up", "down", "route-up", "route-pre-down", "ipchange", "plugin",
+    "learn-address", "client-connect", "client-disconnect", "tls-verify", "up-restart",
+    "auth-user-pass-verify", "management", "setenv-safe", "push-peer-info",
+}
+
 KEY_PATH = Path(os.path.expanduser(os.environ.get("NATURALIS_SSH_KEY", ""))) if os.environ.get("NATURALIS_SSH_KEY") else None
-PROFILE_PATH = (
-    Path(os.path.expanduser(os.environ.get("WIREGUARD_PROFILE", "")))
-    if os.environ.get("WIREGUARD_PROFILE")
-    else None
-)
+_profile_setting = os.environ.get("VPN_PROFILE") or os.environ.get("WIREGUARD_PROFILE") or ""
+PROFILE_PATH = Path(os.path.expanduser(_profile_setting)) if _profile_setting else None
 
 
 def _resolve(hostname: str) -> str:
@@ -92,6 +100,74 @@ def _split_tunnel_profile(text: str, addresses: list[str]) -> str:
     return "\n".join(out) + "\n"
 
 
+def _profile_kind(path: Path) -> str:
+    """Tell an OpenVPN profile from a WireGuard profile.
+
+    Args:
+        path: The profile file.
+
+    Returns:
+        Either openvpn or wireguard.
+    """
+    text = path.read_text(encoding="utf-8")
+    if "[Interface]" in text:
+        return "wireguard"
+    if "\nremote " in "\n" + text or path.suffix == ".ovpn":
+        return "openvpn"
+    raise SystemExit(f"{path} is neither a WireGuard nor an OpenVPN profile.")
+
+
+def _split_tunnel_openvpn(text: str, addresses: list[str]) -> str:
+    """Turn an eduVPN OpenVPN profile into a split tunnel.
+
+    route-nopull makes OpenVPN ignore the routes, the default gateway and the DNS
+    servers that the VPN server pushes. Then one host route per address is added.
+    Refuses a profile that holds a directive that runs a program.
+
+    Args:
+        text: The profile as downloaded from the portal.
+        addresses: The IPv4 addresses that the tunnel may route.
+
+    Returns:
+        The profile text for /etc/openvpn/client.
+    """
+    in_block = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("<") and not stripped.startswith("</"):
+            in_block = True
+        elif stripped.startswith("</"):
+            in_block = False
+        elif not in_block and stripped.split(" ", 1)[0].lower() in FORBIDDEN_OPENVPN:
+            raise SystemExit(f"The OpenVPN profile has a {stripped.split(' ', 1)[0]} line. Remove it, the service runs as root.")
+
+    lines = [text.rstrip(), "", "# Added by the homelab deploy: split tunnel, no pushed routes or DNS.", "route-nopull"]
+    lines += [f"route {address} 255.255.255.255" for address in addresses]
+    return "\n".join(lines) + "\n"
+
+
+def _openvpn_expiry(text: str) -> date | None:
+    """Read the end date of the client certificate in an OpenVPN profile.
+
+    Args:
+        text: The profile text with an embedded cert block.
+
+    Returns:
+        The end date, or None when it cannot be read.
+    """
+    start, end = text.find("<cert>"), text.find("</cert>")
+    if start == -1 or end == -1:
+        return None
+    certificate = text[start + len("<cert>"):end].strip()
+    result = subprocess.run(
+        ["openssl", "x509", "-noout", "-enddate"], input=certificate, capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0 or "=" not in result.stdout:
+        return None
+    month, day, _clock, year = result.stdout.split("=", 1)[1].split()[:4]
+    return datetime.strptime(f"{month} {day} {year}", "%b %d %Y").date()
+
+
 def _pinned_host_keys(hostnames: list[str]) -> str | None:
     """Read the pinned host keys of the hosts from the laptop known_hosts file.
 
@@ -121,14 +197,20 @@ _ready = _key_ok and _profile_ok and _known_hosts is not None
 if not _key_ok:
     logger.warning("NATURALIS_SSH_KEY is not set or the file is missing. The tunnels stay off.")
 if not _profile_ok:
-    logger.warning("WIREGUARD_PROFILE is not set or the file is missing. The VPN stays off.")
+    logger.warning("VPN_PROFILE is not set or the file is missing. The VPN stays off.")
+
+VPN_KIND = _profile_kind(PROFILE_PATH) if _profile_ok else "wireguard"
+VPN_UNIT = f"openvpn-client@{VPN_NAME}" if VPN_KIND == "openvpn" else f"wg-quick@{VPN_NAME}"
+VPN_CONF = (
+    f"/etc/openvpn/client/{VPN_NAME}.conf" if VPN_KIND == "openvpn" else f"/etc/wireguard/{VPN_NAME}.conf"
+)
 
 # ------------------------------------------------------------
 # 1. Packages and the tunnel user
 # ------------------------------------------------------------
 apt.packages(
-    name="Install WireGuard tools and the SSH client",
-    packages=["wireguard-tools", "openssh-client", "curl"],
+    name="Install the VPN tools and the SSH client",
+    packages=["wireguard-tools", "openvpn", "openssh-client", "curl", "openssl"],
     _sudo=True,
 )
 
@@ -181,16 +263,27 @@ if _known_hosts:
 _conf = None
 if _profile_ok:
     _addresses = sorted({_resolve(hostname) for hostname in _hosts})
+    _profile_text = PROFILE_PATH.read_text(encoding="utf-8")
+    if VPN_KIND == "openvpn":
+        files.directory(
+            name="Create the OpenVPN client folder",
+            path="/etc/openvpn/client",
+            mode="0750",
+            _sudo=True,
+        )
+        _vpn_text = _split_tunnel_openvpn(_profile_text, _addresses)
+    else:
+        _vpn_text = _split_tunnel_profile(_profile_text, _addresses)
     _conf = files.put(
-        name="Install the eduVPN WireGuard profile",
-        src=io.StringIO(_split_tunnel_profile(PROFILE_PATH.read_text(encoding="utf-8"), _addresses)),
-        dest=f"/etc/wireguard/{VPN_NAME}.conf",
+        name=f"Install the eduVPN {VPN_KIND} profile",
+        src=io.StringIO(_vpn_text),
+        dest=VPN_CONF,
         user="root",
         group="root",
         mode="0600",
         _sudo=True,
     )
-    logger.info("The VPN routes only: %s", ", ".join(_addresses))
+    logger.info("The %s VPN routes only: %s", VPN_KIND, ", ".join(_addresses))
 
 # ------------------------------------------------------------
 # 3. The tunnel units
@@ -205,7 +298,7 @@ for _tunnel in TUNNELS:
             mode="0644",
             tunnel_user=TUNNEL_USER,
             tunnel_home=TUNNEL_HOME,
-            vpn_name=VPN_NAME,
+            vpn_unit=VPN_UNIT,
             remote_user=REMOTE_USER,
             remote_port=REMOTE_CLICKHOUSE_PORT,
             name_of_tunnel=_tunnel["name"],
@@ -218,7 +311,12 @@ for _tunnel in TUNNELS:
 # ------------------------------------------------------------
 # 4. The hourly check
 # ------------------------------------------------------------
-if _profile_ok:
+if _profile_ok and VPN_KIND == "openvpn":
+    # The client certificate ends with the session, so read the real date.
+    _expires = _openvpn_expiry(_profile_text) or (
+        datetime.fromtimestamp(PROFILE_PATH.stat().st_mtime).date() + timedelta(days=PROFILE_DAYS)
+    )
+elif _profile_ok:
     _expires = datetime.fromtimestamp(PROFILE_PATH.stat().st_mtime).date() + timedelta(days=PROFILE_DAYS)
 else:
     _expires = date.today() + timedelta(days=PROFILE_DAYS)
@@ -232,7 +330,10 @@ files.directory(
 
 files.put(
     name="Write the VPN check settings",
-    src=io.StringIO(f"VPN_NAME={VPN_NAME}\nEXPIRES={_expires.isoformat()}\nWARN_DAYS={WARN_DAYS}\n"),
+    src=io.StringIO(
+        f"VPN_NAME={VPN_NAME}\nVPN_KIND={VPN_KIND}\nVPN_UNIT={VPN_UNIT}\n"
+        f"EXPIRES={_expires.isoformat()}\nWARN_DAYS={WARN_DAYS}\n"
+    ),
     dest="/etc/homelab/naturalis.env",
     mode="0644",
     _sudo=True,
@@ -275,14 +376,14 @@ systemd.daemon_reload(
 if _ready:
     systemd.service(
         name="Enable and start the eduVPN link",
-        service=f"wg-quick@{VPN_NAME}",
+        service=VPN_UNIT,
         running=True,
         enabled=True,
         _sudo=True,
     )
     systemd.service(
         name="Restart the eduVPN link after a profile change",
-        service=f"wg-quick@{VPN_NAME}",
+        service=VPN_UNIT,
         restarted=True,
         _if=_conf.did_change,
         _sudo=True,
@@ -312,9 +413,9 @@ if _ready:
 else:
     print(
         "Naturalis access is installed but switched off. To switch it on:\n"
-        "  1. Log in at https://naturalis.eduvpn.nl/ and download a WireGuard profile\n"
-        "     for this server. Save it outside the repo with mode 0600.\n"
-        "  2. Put its path in homelab/.env as WIREGUARD_PROFILE.\n"
+        "  1. Log in at https://naturalis.eduvpn.nl/ and download a profile (OpenVPN\n"
+        "     or WireGuard) for this server. Save it outside the repo, mode 0600.\n"
+        "  2. Put its path in homelab/.env as VPN_PROFILE.\n"
         "  3. Make sure NATURALIS_SSH_KEY points at the key file, and that both\n"
         "     ClickHouse hosts are in ~/.ssh/known_hosts.\n"
         "  4. Run: PHASE=naturalis uv run pyinfra inventory.py deploy.py"

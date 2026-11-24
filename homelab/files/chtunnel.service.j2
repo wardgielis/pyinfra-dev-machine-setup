@@ -1,7 +1,7 @@
 [Unit]
 Description=ClickHouse {{ name_of_tunnel }} tunnel to {{ remote_host }}
-After=network-online.target wg-quick@{{ vpn_name }}.service
-Wants=network-online.target wg-quick@{{ vpn_name }}.service
+After=network-online.target {{ vpn_unit }}.service
+Wants=network-online.target {{ vpn_unit }}.service
 StartLimitIntervalSec=0
 
 [Service]

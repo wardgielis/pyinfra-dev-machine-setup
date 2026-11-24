@@ -68,10 +68,11 @@ opencode.jsonc needs the restart.
 Two ClickHouse MCP servers need the Naturalis eduVPN link and an SSH tunnel. The
 laptop reaches production through its own tunnel script. The server uses these parts:
 
-- `wg-quick@naturalis`: a WireGuard profile from https://naturalis.eduvpn.nl/. The
-  deploy changes it to a split tunnel. Only the two ClickHouse addresses are routed,
-  and the DNS line is removed. Never use a full tunnel, because it would cut off
-  Tailscale and SSH.
+- `openvpn-client@naturalis` (or `wg-quick@naturalis` for a WireGuard file): the
+  profile from https://naturalis.eduvpn.nl/. The deploy changes it to a split tunnel.
+  For OpenVPN it adds `route-nopull`, so the pushed routes and DNS are ignored, and one
+  host route per ClickHouse address. For WireGuard it limits AllowedIPs and removes the
+  DNS line. Never use a full tunnel, because it would cut off Tailscale and SSH.
 - `chtunnel-prod` and `chtunnel-dev`: SSH tunnels run by the user `chtunnel`, which
   holds the personal Naturalis key. Production listens on 127.0.0.1:8123 and
   development on 127.0.0.1:8124. The OpenCode agent can use the ports and cannot read
@@ -81,19 +82,20 @@ laptop reaches production through its own tunnel script. The server uses these p
 
 Set up or renew the profile (a person must do this about every 90 days):
 
-1. Log in at https://naturalis.eduvpn.nl/ and download a WireGuard profile for this
-   server. Each device needs its own profile.
+1. Log in at https://naturalis.eduvpn.nl/ and download a profile for this server
+   (OpenVPN or WireGuard). Each device needs its own profile.
 2. Save it outside the repo with mode 0600. Put the path in `homelab/.env` as
-   `WIREGUARD_PROFILE`.
+   `VPN_PROFILE`.
 3. Run `PHASE=naturalis uv run pyinfra inventory.py deploy.py` from `homelab/`.
 
-The expiry date is the file date of the profile plus `WIREGUARD_PROFILE_DAYS`
-(default 90). The check warns 7 days before.
+The expiry date comes from the client certificate in an OpenVPN profile. For a
+WireGuard profile it is the file date plus `VPN_PROFILE_DAYS` (default 90). The check
+warns 7 days before.
 
 Checks on the server:
 
 ```sh
-sudo wg show naturalis
+sudo systemctl status openvpn-client@naturalis   # or: sudo wg show naturalis
 systemctl status chtunnel-prod chtunnel-dev
 curl -s http://127.0.0.1:8123/ping     # prints Ok.
 ```

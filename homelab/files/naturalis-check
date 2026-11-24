@@ -1,5 +1,5 @@
 #!/bin/bash
-# Check the eduVPN link, the ClickHouse tunnels and the age of the VPN profile.
+# Check the eduVPN link (OpenVPN or WireGuard), the ClickHouse tunnels and the profile age.
 #
 # Runs as root from naturalis-check.timer. On a problem it posts to the
 # Healthchecks.io /fail URL through homelab-notify and writes a journal line.
@@ -12,13 +12,19 @@ set -u
 problems=""
 add() { problems="${problems:+$problems; }$1"; }
 
-# 1. WireGuard needs a recent handshake. The profile sets a keepalive, so a healthy
-# link shows one within a few minutes.
-handshake=$(wg show "$VPN_NAME" latest-handshakes 2>/dev/null | awk 'NR==1 {print $2}')
-now=$(date +%s)
-if [ -z "${handshake:-}" ] || [ "$handshake" = 0 ] || [ $((now - handshake)) -gt 300 ]; then
-    add "eduVPN has no recent handshake"
+# 1. The VPN service must run. WireGuard also needs a recent handshake, because the
+# profile sets a keepalive. OpenVPN reports a running service only after the link
+# is up (Type=notify), so the unit state is enough there.
+if ! systemctl is-active --quiet "$VPN_UNIT"; then
+    add "$VPN_UNIT is not running"
+elif [ "$VPN_KIND" = wireguard ]; then
+    handshake=$(wg show "$VPN_NAME" latest-handshakes 2>/dev/null | awk 'NR==1 {print $2}')
+    now=$(date +%s)
+    if [ -z "${handshake:-}" ] || [ "$handshake" = 0 ] || [ $((now - handshake)) -gt 300 ]; then
+        add "eduVPN has no recent handshake"
+    fi
 fi
+now=$(date +%s)
 
 # 2. Both tunnels must reach ClickHouse. /ping answers Ok. when the server is up.
 for port in 8123 8124; do
