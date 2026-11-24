@@ -172,9 +172,16 @@ function awsauth() {
 # 10. OPENCODE REMOTE
 # Runs the terminal client against the homelab server instead of this machine.
 # Needs the Tailscale app connected and the server running. The server requires
-# a password; the client asks for it on first use.
+# a password. The function reads it from the homelab .env file in the repo and
+# gives it to this one command only. The password is never printed or exported.
+# If OPENCODE_PASSWORD is already set in the shell, that value is used instead.
 # ==========================================
 function opencode-remote() {
     local server="${OPENCODE_SERVER_URL:-https://briareus.dove-cobia.ts.net:8443}"
-    opencode --server "$server" "$@"
+    local env_file="${HOMELAB_ENV_FILE:-$HOME/pyinfra-dev-machine-setup/homelab/.env}"
+    local password="${OPENCODE_PASSWORD:-}"
+    if [[ -z "$password" && -r "$env_file" ]]; then
+        password="$(grep '^OPENCODE_PASSWORD=' "$env_file" | cut -d= -f2-)"
+    fi
+    OPENCODE_PASSWORD="$password" opencode --server "$server" "$@"
 }
