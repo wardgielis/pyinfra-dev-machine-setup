@@ -183,7 +183,17 @@ exist. Two small files on the server connect it, and the homelab deploy writes b
   `~/.config/opencode-password`. The script holds no secret. Every process in that remote
   window, terminals included, then has the variable. The agent user already holds that
   password.
-`sst-dev.opencode-v2` starts its own server too, so it is not used.
+`sst-dev.opencode-v2` cannot attach to a server, so it is not used. It always starts its own
+server on port 4096 (your error "Is port 4096 in use?"), has no setting for another
+address, no password support, and waits for the OpenCode v1 output line.
+
+OpenCode Sidebar GUI (`bmpenuelas.opencode-web-sidebar`) is the extension that attaches. It
+shows the OpenCode web UI in a VS Code panel, the same UI as on the phone, for the address
+in `opencode-web-sidebar.servers`. The managed setting holds only the shared server, so it
+never starts a second one. Run the command OpenCode: Set Server Password once. It stores the
+password in VS Code's secret storage, and the user name is always `opencode`. The password
+is in `homelab/.env`: `grep '^OPENCODE_PASSWORD=' homelab/.env | cut -d= -f2- | pbcopy`
+puts it on the clipboard without printing it.
 
 The community extension `vyomeshupadhyay.vscode-opencode` is not installed on purpose.
 It has no source repository.

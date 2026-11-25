@@ -67,8 +67,22 @@
     "ultram4rine.sqltools-clickhouse-driver",
     "sst-dev.opencode",
     "FedaykinDev.openchamber",
+    "bmpenuelas.opencode-web-sidebar",
     "AmazonWebServices.aws-toolkit-vscode"
   ],
+  // --- OpenCode Sidebar GUI: attach to the shared server, never start one ---
+  // Run the command OpenCode: Set Server Password once. The user name is always opencode.
+  "opencode-web-sidebar.servers": [
+    {
+      "id": "briareus",
+      "label": "briareus (shared server)",
+      "url": "https://briareus.dove-cobia.ts.net:8443",
+      "serverVersion": "v2",
+      "isWsl": false,
+      "isDefault": true
+    }
+  ],
+
   "remote.SSH.connectTimeout": 30,
   "remote.SSH.showLoginTerminal": false
 }

@@ -13,6 +13,14 @@ sst-dev.opencode
 # is a UI for OpenCode. The server machine settings point it at the shared server
 # (homelab/tasks/opencode.py). Without that address it starts its own second server with
 # no MCP servers, skills or sandbox.
+# OpenCode Sidebar GUI: puts the OpenCode web UI (the same one as on the phone) into a VS Code
+# panel, and ATTACHES to a server address. Vetted on 2026-11-25: MIT, public source, 14
+# small files, no analytics, no process of its own except an optional start button for a
+# local server. The password sits in VS Code's secret storage. The managed setting
+# opencode-web-sidebar.servers holds only the shared server, so it never starts a second one.
+# sst-dev.opencode-v2 was rejected: it always starts its own server on port 4096, has no
+# server setting and no password support, and waits for the v1 output line.
+bmpenuelas.opencode-web-sidebar
 # Not installed on purpose: vyomeshupadhyay.vscode-opencode. It has no source
 # repository and it would hold the server password. Add it by hand only after you
 # have looked at its page.
