@@ -66,6 +66,7 @@
     "mtxr.sqltools-driver-pg",
     "ultram4rine.sqltools-clickhouse-driver",
     "sst-dev.opencode",
+    "FedaykinDev.openchamber",
     "AmazonWebServices.aws-toolkit-vscode"
   ],
   "remote.SSH.connectTimeout": 30,

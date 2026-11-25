@@ -331,9 +331,19 @@ _sqltools_connections = [
     )
 ]
 
+# OpenChamber (a VS Code extension, used in the Remote-SSH window) must use the shared
+# OpenCode server. Without an address it starts its own second server, which has no MCP
+# servers, no skills, no policy and no systemd sandbox. The password reaches it through
+# server-env-setup below.
+_machine_settings_content = {
+    "sqltools.connections": _sqltools_connections,
+    "openchamber.apiUrl": "http://127.0.0.1:4096",
+    "openchamber.opencodeBinary": "/home/linuxbrew/.linuxbrew/bin/opencode",
+}
+
 files.put(
-    name="Write the VS Code Server machine settings with the SQLTools connections",
-    src=io.StringIO(json.dumps({"sqltools.connections": _sqltools_connections}, indent=2) + "\n"),
+    name="Write the VS Code Server machine settings",
+    src=io.StringIO(json.dumps(_machine_settings_content, indent=2) + "\n"),
     dest=_machine_settings,
     user=AGENT_USER,
     group=AGENT_USER,
@@ -341,14 +351,27 @@ files.put(
     _sudo=True,
 )
 
-# The OpenChamber trial wrote this file. Remove it.
-for _leftover in (f"{_vscode_server}/server-env-setup",):
-    files.file(
-        name=f"Remove the OpenChamber trial file {_leftover}",
-        path=_leftover,
-        present=False,
-        _sudo=True,
-    )
+# VS Code Server runs this script before it starts. It gives the extension host the
+# OpenCode password, read from the file that the oc helper uses, so this file holds no
+# secret. Every process in the remote window, terminals included, gets the variable. The
+# agent user already holds that password. It also puts Homebrew on the PATH, which a
+# non-interactive SSH shell does not have.
+files.put(
+    name="Write the VS Code Server environment script",
+    src=io.StringIO(
+        "# Managed by the homelab deploy. Sourced by VS Code Server before it starts.\n"
+        'export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"\n'
+        'if [ -r "$HOME/.config/opencode-password" ]; then\n'
+        '    OPENCODE_PASSWORD="$(cat "$HOME/.config/opencode-password")"\n'
+        "    export OPENCODE_PASSWORD\n"
+        "fi\n"
+    ),
+    dest=f"{_vscode_server}/server-env-setup",
+    user=AGENT_USER,
+    group=AGENT_USER,
+    mode="0600",
+    _sudo=True,
+)
 
 _secrets = files.put(
     name="Write the OpenCode environment file",

@@ -169,10 +169,21 @@ OpenCode in the editor, in the order I would try them:
    so it works from a local window or a remote window.
 3. The OpenCode desktop app (`OpenCode.app`), pointed at the same server.
 
-OpenChamber (`FedaykinDev.openchamber`) was tried on 2026-11-24 and dropped. It is MIT
-licensed, has public source and supports OpenCode 2, but it felt poor against the shared
-server. It is built around its own managed server. `sst-dev.opencode-v2` starts its own
-server too, so it is not used.
+OpenChamber (`FedaykinDev.openchamber`) is a full interface for OpenCode. It is MIT
+licensed, has public source and supports OpenCode 2. It runs only in the Remote-SSH window,
+on the server, so it is in the remote default list and not installed on the laptop. It is
+only a UI: the work is done by an OpenCode server. Always point it at the shared server.
+Without an address it starts its own second server, which has no MCP servers, no skills,
+no permission policy and no systemd sandbox. Check with
+`ps -u agent -o args | grep "opencode serve"`: only the `--port 4096` process should
+exist. Two small files on the server connect it, and the homelab deploy writes both:
+- `~/.vscode-server/data/Machine/settings.json` sets `openchamber.apiUrl` to
+  `http://127.0.0.1:4096`, next to the SQLTools connections.
+- `~/.vscode-server/server-env-setup` gives VS Code Server `OPENCODE_PASSWORD`, read from
+  `~/.config/opencode-password`. The script holds no secret. Every process in that remote
+  window, terminals included, then has the variable. The agent user already holds that
+  password.
+`sst-dev.opencode-v2` starts its own server too, so it is not used.
 
 The community extension `vyomeshupadhyay.vscode-opencode` is not installed on purpose.
 It has no source repository.
