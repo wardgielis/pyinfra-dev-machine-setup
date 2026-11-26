@@ -128,6 +128,22 @@ passwords are in `homelab/.env` as AIRFLOW_DEV_PASSWORD and AIRFLOW_PROD_PASSWOR
 URLs are `https://airflow.arise.dryrun.link` (development) and
 `https://airflow.arise-biodiversity.nl` (production).
 
+The Airflow MCP: `astro-airflow-mcp` 0.9.2 (Astronomer), two entries in the shared MCP list,
+`airflow_development` and `airflow_production`, so the laptop and the server both have them.
+It was vetted on 2026-11-26 by reading its code: it keeps the token in memory, writes
+nothing to disk, and sends anonymous usage data to api.astronomer.io, which the entry turns
+off with `AF_TELEMETRY_DISABLED=1`. The version is pinned. Change the pin only after
+reading the new code again, because the package holds production credentials. The entry
+lists 25 tools: the read tools plus `trigger_dag` and `trigger_dag_and_wait`. It leaves out
+`pause_dag`, `unpause_dag`, `delete_dag_run`, `clear_dag_run`, `clear_task_instances` and
+the tools that read connections, variables and the configuration. That list is a guard
+against mistakes, not a security boundary: the agent holds the password and could call the
+API directly. The Airflow role is the real limit.
+
+Starting a pipeline runs it for real, unattended, and on production it changes real data.
+The server permission policy does not ask before an MCP tool call. Ask for a development
+run first, and ask the agent to name the DAG and its parameters before it triggers one.
+
 To create them again (for example after a restore from an old database dump):
 
 1. Run the role script on the Airflow VM, once per environment:
