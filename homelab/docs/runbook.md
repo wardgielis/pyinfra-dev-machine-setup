@@ -111,9 +111,16 @@ route does not give API access: the Airflow API (3.3.2) answers 401 without a to
 web login is Microsoft SSO, which cannot be completed on the server. The API token comes
 from `POST /auth/token` with the user name and password of a database user. The repo's
 cleanup DAGs use an account that can delete DAGs, so do not give that account to the
-agent. Ask an Airflow admin for a separate user with the Viewer role, put its name and
-password in `homelab/.env`, and add them to the OpenCode secrets. The URLs are
-`https://airflow.arise.dryrun.link` (development) and
+agent. The agent must be able to start pipelines, so Viewer is too small. The built-in
+User role is the smallest that can, but it also holds `can_delete` on DAGs, DAG runs and
+task instances. Prefer a custom role, made by an Airflow admin in Security, List Roles:
+copy the Viewer permissions, then add `can_create` on DAG Runs (this starts a run) and
+`can_edit` on DAG Runs. Add `can_edit` on DAGs only if the agent must pause or unpause. Do
+not add any `can_delete`. Airflow can also limit a role to named DAGs, which is better
+than all DAGs. Start with development. Make a separate user for production, only when
+that is wanted. Give the user a long random password, put its name and password in
+`homelab/.env`, and add them to the OpenCode secrets. The MCP then gets a token with
+`POST /auth/token`. The URLs are `https://airflow.arise.dryrun.link` (development) and
 `https://airflow.arise-biodiversity.nl` (production).
 
 After a deploy that restarts the VPN, the ClickHouse tunnels need about 90 seconds to
