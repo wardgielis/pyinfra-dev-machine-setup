@@ -112,16 +112,39 @@ web login is Microsoft SSO, which cannot be completed on the server. The API tok
 from `POST /auth/token` with the user name and password of a database user. The repo's
 cleanup DAGs use an account that can delete DAGs, so do not give that account to the
 agent. The agent must be able to start pipelines, so Viewer is too small. The built-in
-User role is the smallest that can, but it also holds `can_delete` on DAGs, DAG runs and
-task instances. Prefer a custom role, made by an Airflow admin in Security, List Roles:
-copy the Viewer permissions, then add `can_create` on DAG Runs (this starts a run) and
-`can_edit` on DAG Runs. Add `can_edit` on DAGs only if the agent must pause or unpause. Do
-not add any `can_delete`. Airflow can also limit a role to named DAGs, which is better
-than all DAGs. Start with development. Make a separate user for production, only when
-that is wanted. Give the user a long random password, put its name and password in
-`homelab/.env`, and add them to the OpenCode secrets. The MCP then gets a token with
-`POST /auth/token`. The URLs are `https://airflow.arise.dryrun.link` (development) and
+User role is the smallest built-in role that can, but it also holds `can_delete` on DAGs,
+DAG runs and task instances. So the agent has its own role, PipelineStarter: every Viewer
+permission, plus `can_create` on DAG Runs and `can_edit` on DAGs. Airflow checks both when
+a run starts. A non-GET call on a DAG sub entity needs EDIT on the DAG, so `can_edit` on
+DAGs is not optional. A side effect is that the agent can also pause and unpause DAGs. The
+role has no `can_delete` anywhere and cannot read connections or variables. To limit it to
+named DAGs later, replace the global `can_edit` on DAGs with `can_edit` on `DAG:<dag_id>`
+and `can_create` on `DAG Run:<dag_id>` for each allowed DAG.
+
+State on 2026-11-26: the role and a user named opencode-agent exist on both the development
+and the production Airflow. They were made with the Airflow command line inside the
+api-server pod (the web page cannot add database users when logins go through SSO). The
+passwords are in `homelab/.env` as AIRFLOW_DEV_PASSWORD and AIRFLOW_PROD_PASSWORD. The
+URLs are `https://airflow.arise.dryrun.link` (development) and
 `https://airflow.arise-biodiversity.nl` (production).
+
+To create them again (for example after a restore from an old database dump):
+
+1. Run the role script on the Airflow VM, once per environment:
+   `ssh development@tools-<env>-airflow.hosts.naturalis.io 'bash -s' < homelab/files/airflow_agent_role.sh`
+2. Create the user. The password goes through stdin, so it is never in a command line:
+   `grep '^AIRFLOW_<ENV>_PASSWORD=' homelab/.env | cut -d= -f2- | ssh development@tools-<env>-airflow.hosts.naturalis.io "microk8s kubectl -n airflow exec -i deploy/airflow-api-server -- sh -c 'read -r PW; airflow users create -u opencode-agent -e opencode-agent@briareus.invalid -f OpenCode -l Agent -r PipelineStarter -p \"\$PW\"'"`
+3. Check both with `python3 -I scripts/airflow_agent_check.py DEV https://airflow.arise.dryrun.link`
+   and the same with PROD and the production URL. The check starts and deletes nothing.
+
+Why a redeploy does not remove them: the users and roles live in the Airflow metadata
+database, which is outside the cluster (the chart setting `postgresql.enabled` is false).
+A deploy replaces pods and jobs and runs the schema migration. It does not touch user
+rows. The permission sync that runs at startup loops over the five built-in roles only and
+only adds missing permissions. It never deletes a user and never touches a custom role. The
+only things that remove them are a rebuilt database or a restore from a dump made before
+2026-11-26. The production database is dumped to S3 every night, so a restore from last
+night keeps them. The check above shows within seconds whether they survived.
 
 After a deploy that restarts the VPN, the ClickHouse tunnels need about 90 seconds to
 notice the new link and reconnect by themselves. During that time the ClickHouse MCP
