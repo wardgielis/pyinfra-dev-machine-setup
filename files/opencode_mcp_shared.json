@@ -55,6 +55,38 @@
     "protocol": "2026-07-28",
     "command": ["uvx", "mcp-proxy-for-aws@latest", "https://aws-mcp.us-east-1.api.aws/mcp", "--region", "eu-west-1"]
   },
+  "airflow_development": {
+    "type": "local",
+    // astro-airflow-mcp 0.9.2, vetted on 2026-11-26: it reads the login from the
+    // environment, keeps the token in memory and writes nothing to disk. Telemetry is
+    // switched off. The tool list holds the read tools plus trigger_dag and
+    // trigger_dag_and_wait. Delete and clear tools, connections and variables are left out.
+    // The Airflow user (role PipelineStarter) cannot delete or read those either.
+    "command": ["uvx", "astro-airflow-mcp==0.9.2", "--transport", "stdio"],
+    "environment": {
+      "AIRFLOW_API_URL": "https://airflow.arise.dryrun.link",
+      "AIRFLOW_USERNAME": "${AIRFLOW_DEV_USERNAME}",
+      "AIRFLOW_PASSWORD": "${AIRFLOW_DEV_PASSWORD}",
+      "AF_TELEMETRY_DISABLED": "1",
+      "ASTRO_MCP_ALLOWED_TOOLS": "list_dags,get_dag_details,get_dag_source,get_dag_stats,list_dag_runs,get_dag_run,trigger_dag,trigger_dag_and_wait,list_dag_warnings,list_import_errors,explore_dag,diagnose_dag_run,get_system_health,get_task,list_tasks,get_task_instance,get_task_logs,list_assets,list_asset_events,get_upstream_asset_events,get_airflow_version,list_pools,get_pool,list_plugins,list_providers"
+    }
+  },
+  "airflow_production": {
+    "type": "local",
+    // astro-airflow-mcp 0.9.2, vetted on 2026-11-26: it reads the login from the
+    // environment, keeps the token in memory and writes nothing to disk. Telemetry is
+    // switched off. The tool list holds the read tools plus trigger_dag and
+    // trigger_dag_and_wait. Delete and clear tools, connections and variables are left out.
+    // The Airflow user (role PipelineStarter) cannot delete or read those either.
+    "command": ["uvx", "astro-airflow-mcp==0.9.2", "--transport", "stdio"],
+    "environment": {
+      "AIRFLOW_API_URL": "https://airflow.arise-biodiversity.nl",
+      "AIRFLOW_USERNAME": "${AIRFLOW_PROD_USERNAME}",
+      "AIRFLOW_PASSWORD": "${AIRFLOW_PROD_PASSWORD}",
+      "AF_TELEMETRY_DISABLED": "1",
+      "ASTRO_MCP_ALLOWED_TOOLS": "list_dags,get_dag_details,get_dag_source,get_dag_stats,list_dag_runs,get_dag_run,trigger_dag,trigger_dag_and_wait,list_dag_warnings,list_import_errors,explore_dag,diagnose_dag_run,get_system_health,get_task,list_tasks,get_task_instance,get_task_logs,list_assets,list_asset_events,get_upstream_asset_events,get_airflow_version,list_pools,get_pool,list_plugins,list_providers"
+    }
+  },
   "databricks": {
     "type": "local",
     "command": [

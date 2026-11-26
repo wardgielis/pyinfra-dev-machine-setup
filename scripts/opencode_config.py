@@ -65,6 +65,10 @@ MCP_SECRET_VARIABLES = (
     "CLICKHOUSE_PROD_PASSWORD",
     "GRAFANA_URL",
     "GRAFANA_SERVICE_ACCOUNT_TOKEN",
+    "AIRFLOW_DEV_USERNAME",
+    "AIRFLOW_DEV_PASSWORD",
+    "AIRFLOW_PROD_USERNAME",
+    "AIRFLOW_PROD_PASSWORD",
 )
 
 # Tokens that tools read from the environment but that the config never names.
