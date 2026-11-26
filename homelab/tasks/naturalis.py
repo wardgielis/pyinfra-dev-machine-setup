@@ -35,6 +35,16 @@ REMOTE_USER = "development"
 REMOTE_CLICKHOUSE_PORT = 8123
 
 # The prod port matches the laptop MCP entry. Dev uses 8124 on the server.
+# Hosts that the server must reach over the VPN without a tunnel. Airflow takes ports 80
+# and 443 from the eduVPN range, so a plain route is enough. Route only these addresses,
+# never a whole /24 and never a full tunnel: a route lets the unattended agent open
+# connections to the host, and a full tunnel would cut off Tailscale and SSH. Reaching
+# the host is not enough for the API: it needs a token (see the runbook).
+EXTRA_ROUTE_HOSTS = [
+    "tools-production-airflow.hosts.naturalis.io",
+    "tools-development-airflow.hosts.naturalis.io",
+]
+
 TUNNELS = [
     {"name": "prod", "host": "tools-production-clickhouse.hosts.naturalis.io", "port": 8123},
     {"name": "dev", "host": "tools-development-clickhouse.hosts.naturalis.io", "port": 8124},
@@ -262,7 +272,7 @@ if _known_hosts:
 # ------------------------------------------------------------
 _conf = None
 if _profile_ok:
-    _addresses = sorted({_resolve(hostname) for hostname in _hosts})
+    _addresses = sorted({_resolve(hostname) for hostname in [*_hosts, *EXTRA_ROUTE_HOSTS]})
     _profile_text = PROFILE_PATH.read_text(encoding="utf-8")
     if VPN_KIND == "openvpn":
         files.directory(
