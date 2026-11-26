@@ -103,6 +103,23 @@ curl -s http://127.0.0.1:8123/ping     # prints Ok.
 The deploy resolves the two host names when it writes the profile. If a ClickHouse
 address changes, run the deploy again.
 
+Airflow routes: the profile also routes `tools-production-airflow` (145.136.248.252) and
+`tools-development-airflow` (145.136.249.205), as single host routes. The repo's rules let
+the eduVPN range reach them on ports 80 and 443 only. Never route a whole network or use a
+full tunnel, because a route lets the unattended agent open connections to that host. A
+route does not give API access: the Airflow API (3.3.2) answers 401 without a token. The
+web login is Microsoft SSO, which cannot be completed on the server. The API token comes
+from `POST /auth/token` with the user name and password of a database user. The repo's
+cleanup DAGs use an account that can delete DAGs, so do not give that account to the
+agent. Ask an Airflow admin for a separate user with the Viewer role, put its name and
+password in `homelab/.env`, and add them to the OpenCode secrets. The URLs are
+`https://airflow.arise.dryrun.link` (development) and
+`https://airflow.arise-biodiversity.nl` (production).
+
+After a deploy that restarts the VPN, the ClickHouse tunnels need about 90 seconds to
+notice the new link and reconnect by themselves. During that time the ClickHouse MCP
+servers fail.
+
 Known limit: the personal Naturalis key sits on this box. Ask infra for a dedicated
 read-only key and a longer-lived server profile, then replace both.
 
